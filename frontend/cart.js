@@ -160,7 +160,7 @@ document.getElementById('cart-order-form')?.addEventListener('submit', async fun
 
     // ২. ডাটাবেসে অর্ডার সেভ করা (API কল)
     try {
-        await fetch('https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/orders/', {
+        await fetch('https://https://sihha-natural.onrender.com/api/orders/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)
