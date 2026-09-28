@@ -71,7 +71,7 @@ async function loadCategories() {
     const productCatSelect = document.getElementById('category');
     
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/categories/");
+        const response = await fetch("https://sihha-natural.onrender.comapi/categories/");
         const categories = await response.json();
         
         catList.innerHTML = '';
@@ -110,7 +110,7 @@ async function addCategory() {
     if(!name) return alert("Please enter a category name!");
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/categories/", {
+        const response = await fetch("https://sihha-natural.onrender.comapi/categories/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: name })
@@ -132,7 +132,7 @@ async function deleteVideo(id) {
     if(!confirm("Are you sure you want to delete this video?")) return;
     
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/videos/${id}`, { 
+        const response = await fetch(`https://sihha-natural.onrender.comapi/videos/${id}`, { 
             method: 'DELETE' 
         });
         
@@ -170,7 +170,7 @@ document.getElementById('edit-category-form').addEventListener('submit', async f
     if(!newName) return;
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/categories/${currentEditCategoryId}`, {
+        const response = await fetch(`https://sihha-natural.onrender.comapi/categories/${currentEditCategoryId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: newName })
@@ -190,7 +190,7 @@ document.getElementById('edit-category-form').addEventListener('submit', async f
 async function loadBanners() {
     const bannerList = document.getElementById('banner-list');
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/banners/");
+        const response = await fetch("https://sihha-natural.onrender.comapi/banners/");
         const banners = await response.json();
         
         bannerList.innerHTML = '';
@@ -226,7 +226,7 @@ async function uploadBanner() {
     formData.append("image", fileInput.files[0]);
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/banners/", {
+        const response = await fetch("https://sihha-natural.onrender.comapi/banners/", {
             method: "POST",
             body: formData
         });
@@ -246,7 +246,7 @@ async function uploadBanner() {
 
 async function deleteBanner(id) {
     if(!confirm("Delete this banner?")) return;
-    await fetch(`http://127.0.0.1:8000/api/banners/${id}`, { method: 'DELETE' });
+    await fetch(`https://sihha-natural.onrender.comapi/banners/${id}`, { method: 'DELETE' });
     loadBanners();
 }
 
@@ -256,7 +256,7 @@ let allProductsData = [];
 async function loadAdminProducts() {
     const tableBody = document.getElementById('admin-product-list');
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/products/");
+        const response = await fetch("https://sihha-natural.onrender.comapi/products/");
         const products = await response.json();
         
         allProductsData = products; 
@@ -323,7 +323,7 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
     submitBtn.innerText = "Saving...";
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/products/${id}`, {
+        const response = await fetch(`https://sihha-natural.onrender.comapi/products/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedData)
@@ -345,7 +345,7 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
 async function deleteProduct(productId) {
     if(!confirm("Are you sure you want to delete this product?")) return;
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/products/${productId}`, { method: 'DELETE' });
+        const response = await fetch(`https://sihha-natural.onrender.comapi/products/${productId}`, { method: 'DELETE' });
         if(response.ok) {
             loadAdminProducts(); 
         } else {
@@ -375,7 +375,7 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
     formData.append("image", document.getElementById('image').files[0]);
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/products/", {
+        const response = await fetch("https://sihha-natural.onrender.comapi/products/", {
             method: "POST",
             body: formData
         });
@@ -399,7 +399,7 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
 });
 
 // ================= LOAD ORDERS & NOTIFICATIONS =================
-const ORDERS_API = "http://127.0.0.1:8000/api/orders/";
+const ORDERS_API = "https://sihha-natural.onrender.comapi/orders/";
 
 async function fetchOrders() {
     try {
@@ -535,7 +535,7 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 // ================= VIDEO MANAGEMENT (NEW) =================
-const VIDEOS_API = "http://127.0.0.1:8000/api/videos/";
+const VIDEOS_API = "https://sihha-natural.onrender.comapi/videos/";
 
 async function loadAdminVideos() {
     const videoList = document.getElementById('admin-video-list');

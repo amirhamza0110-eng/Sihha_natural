@@ -34,7 +34,7 @@ async def add_video(title: str = Form(...), url: str = Form(...), thumbnail: Upl
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(thumbnail.file, buffer)
         
-    thumbnail_url = f"http://127.0.0.1:8000/{file_path}"
+    thumbnail_url = f"https://sihha-natural.onrender.com{file_path}"
     
     new_video = {
         "title": title,

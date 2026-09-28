@@ -1,6 +1,6 @@
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get('id');
-const API_PRODUCT_URL = `http://127.0.0.1:8000/api/products/${productId}`;
+const API_PRODUCT_URL = `https://sihha-natural.onrender.comapi/products/${productId}`;
 
 let currentProductPrice = 0;
 let currentProductName = "";
@@ -110,7 +110,7 @@ if (orderForm) {
 
         // ২. ডাটাবেসে অর্ডার সেভ করা (API কল)
         try {
-            await fetch('http://127.0.0.1:8000/api/orders/', {
+            await fetch('https://sihha-natural.onrender.comapi/orders/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)
