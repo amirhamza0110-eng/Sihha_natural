@@ -71,7 +71,7 @@ async function loadCategories() {
     const productCatSelect = document.getElementById('category');
     
     try {
-        const response = await fetch("https://sihha-natural.onrender.comapi/categories/");
+        const response = await fetch("https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/categories/");
         const categories = await response.json();
         
         catList.innerHTML = '';
@@ -110,7 +110,7 @@ async function addCategory() {
     if(!name) return alert("Please enter a category name!");
 
     try {
-        const response = await fetch("https://sihha-natural.onrender.comapi/categories/", {
+        const response = await fetch("https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/categories/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: name })
@@ -132,7 +132,7 @@ async function deleteVideo(id) {
     if(!confirm("Are you sure you want to delete this video?")) return;
     
     try {
-        const response = await fetch(`https://sihha-natural.onrender.comapi/videos/${id}`, { 
+        const response = await fetch(`https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/videos/${id}`, { 
             method: 'DELETE' 
         });
         
@@ -170,7 +170,7 @@ document.getElementById('edit-category-form').addEventListener('submit', async f
     if(!newName) return;
 
     try {
-        const response = await fetch(`https://sihha-natural.onrender.comapi/categories/${currentEditCategoryId}`, {
+        const response = await fetch(`https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/categories/${currentEditCategoryId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: newName })
@@ -190,7 +190,7 @@ document.getElementById('edit-category-form').addEventListener('submit', async f
 async function loadBanners() {
     const bannerList = document.getElementById('banner-list');
     try {
-        const response = await fetch("https://sihha-natural.onrender.comapi/banners/");
+        const response = await fetch("https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/banners/");
         const banners = await response.json();
         
         bannerList.innerHTML = '';
@@ -226,7 +226,7 @@ async function uploadBanner() {
     formData.append("image", fileInput.files[0]);
 
     try {
-        const response = await fetch("https://sihha-natural.onrender.comapi/banners/", {
+        const response = await fetch("https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/banners/", {
             method: "POST",
             body: formData
         });
@@ -246,7 +246,7 @@ async function uploadBanner() {
 
 async function deleteBanner(id) {
     if(!confirm("Delete this banner?")) return;
-    await fetch(`https://sihha-natural.onrender.comapi/banners/${id}`, { method: 'DELETE' });
+    await fetch(`https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/banners/${id}`, { method: 'DELETE' });
     loadBanners();
 }
 
@@ -256,7 +256,7 @@ let allProductsData = [];
 async function loadAdminProducts() {
     const tableBody = document.getElementById('admin-product-list');
     try {
-        const response = await fetch("https://sihha-natural.onrender.comapi/products/");
+        const response = await fetch("https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/products/");
         const products = await response.json();
         
         allProductsData = products; 
@@ -323,7 +323,7 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
     submitBtn.innerText = "Saving...";
 
     try {
-        const response = await fetch(`https://sihha-natural.onrender.comapi/products/${id}`, {
+        const response = await fetch(`https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/products/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedData)
@@ -345,7 +345,7 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
 async function deleteProduct(productId) {
     if(!confirm("Are you sure you want to delete this product?")) return;
     try {
-        const response = await fetch(`https://sihha-natural.onrender.comapi/products/${productId}`, { method: 'DELETE' });
+        const response = await fetch(`https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/products/${productId}`, { method: 'DELETE' });
         if(response.ok) {
             loadAdminProducts(); 
         } else {
@@ -375,7 +375,7 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
     formData.append("image", document.getElementById('image').files[0]);
 
     try {
-        const response = await fetch("https://sihha-natural.onrender.comapi/products/", {
+        const response = await fetch("https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/products/", {
             method: "POST",
             body: formData
         });
@@ -399,7 +399,7 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
 });
 
 // ================= LOAD ORDERS & NOTIFICATIONS =================
-const ORDERS_API = "https://sihha-natural.onrender.comapi/orders/";
+const ORDERS_API = "https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/orders/";
 
 async function fetchOrders() {
     try {
@@ -535,7 +535,7 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 // ================= VIDEO MANAGEMENT (NEW) =================
-const VIDEOS_API = "https://sihha-natural.onrender.comapi/videos/";
+const VIDEOS_API = "https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/videos/";
 
 async function loadAdminVideos() {
     const videoList = document.getElementById('admin-video-list');

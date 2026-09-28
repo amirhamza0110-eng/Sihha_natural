@@ -1,10 +1,10 @@
 // ================= গ্লোবাল ভেরিয়েবল (সার্চ ও ফিল্টারের জন্য) =================
 let allProducts = [];
 
-const API_URL = "https://sihha-natural.onrender.comapi/products/";
-const BANNERS_API = "https://sihha-natural.onrender.comapi/banners/";
-const CATEGORIES_API = "https://sihha-natural.onrender.comapi/categories/";
-const VIDEOS_API = "https://sihha-natural.onrender.comapi/videos/"; // নতুন ভিডিও API
+const API_URL = "https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/products/";
+const BANNERS_API = "https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/banners/";
+const CATEGORIES_API = "https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/categories/";
+const VIDEOS_API = "https://[https://sihha-natural.onrender.com/api](https://sihha-natural.onrender.com/api)/videos/"; // নতুন ভিডিও API
 
 const productContainer = document.getElementById("product-container");
 const loadingMsg = document.getElementById("loading-msg");
