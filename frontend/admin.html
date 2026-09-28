@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Sihha Naturals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { choco: '#4e342e', natureGreen: '#2e7d32', lightGreen: '#e8f5e9' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans flex h-screen overflow-hidden">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-choco text-white flex flex-col h-full shadow-xl z-20">
+        <div class="p-6 text-center border-b border-gray-600">
+            <h1 class="text-2xl font-bold text-lightGreen"><i class="fa-solid fa-leaf mr-2"></i>Sihha Admin</h1>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <!-- New Orders Tab with Notification Badge -->
+            <button onclick="switchTab('orders')" id="tab-orders" class="w-full flex items-center px-4 py-3 hover:bg-gray-700 rounded-lg transition text-left relative">
+                <i class="fa-solid fa-bell w-5 mr-3"></i> Orders
+                <span id="order-notification-badge" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
+            </button>
+            <button onclick="switchTab('products')" id="tab-products" class="w-full flex items-center gap-3 px-4 py-3 bg-natureGreen rounded-lg transition text-left">
+                <i class="fa-solid fa-box w-5"></i> Products
+            </button>
+            <button onclick="switchTab('categories')" id="tab-categories" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition text-left">
+                <i class="fa-solid fa-tags w-5"></i> Categories
+            </button>
+            <button onclick="switchTab('banners')" id="tab-banners" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition text-left">
+                <i class="fa-solid fa-images w-5"></i> Banners
+            </button>
+            
+            <!-- Video Tab -->
+            <button onclick="switchTab('videos')" id="tab-videos" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition text-left">
+                <i class="fa-brands fa-youtube w-5 text-red-400"></i> Videos
+            </button>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-600">
+            <button type="button" onclick="adminLogout()" class="block w-full text-center bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition mb-3">
+                 <i class="fa-solid fa-power-off mr-2"></i> Lock Panel
+            </button>
+            <a href="index.html" class="block text-center bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition">
+                <i class="fa-solid fa-store mr-2"></i> View Store
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-gray-50 p-8">
+        
+        <!-- ================= ORDERS SECTION ================= -->
+        <section id="section-orders" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-list-check text-natureGreen"></i> Customer Orders</h2>
+                
+                <!-- NEW: Delete Selected Button -->
+                <button onclick="deleteSelectedOrders()" id="bulk-delete-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition shadow-md">
+                    <i class="fa-solid fa-trash mr-2"></i> Delete Selected
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto bg-white rounded-lg shadow">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-natureGreen text-white text-sm">
+                            <!-- NEW: Select All Checkbox -->
+                            <th class="p-4 w-12 text-center">
+                                <input type="checkbox" id="select-all-orders" onclick="toggleAllOrders(this)" class="w-4 h-4 cursor-pointer accent-choco">
+                            </th>
+                            <th class="p-4">Date</th>
+                            <th class="p-4">Customer Info</th>
+                            <th class="p-4">Items</th>
+                            <th class="p-4">Total Bill</th>
+                            <th class="p-4">Status</th>
+                            <th class="p-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-orders-list" class="text-sm divide-y divide-gray-200">
+                        <tr><td colspan="7" class="p-4 text-center text-gray-500">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PRODUCT SECTION ================= -->
+        <section id="section-products" class="block">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Manage Products</h2>
+            </div>
+            
+            <!-- Upload Product Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <h3 class="text-lg font-bold mb-4 border-b pb-2">Add New Product</h3>
+                <form id="add-product-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Name</label>
+                            <input type="text" id="name" required class="w-full border p-2 rounded focus:ring-natureGreen focus:border-natureGreen outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Category</label>
+                            <select id="category" required class="w-full border p-2 rounded outline-none"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Price (৳)</label>
+                            <input type="number" id="price" required class="w-full border p-2 rounded outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Stock</label>
+                            <input type="number" id="stock" required class="w-full border p-2 rounded outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Image</label>
+                        <input type="file" id="image" accept="image/*" required class="w-full border p-2 rounded bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Description</label>
+                        <textarea id="description" rows="2" required class="w-full border p-2 rounded outline-none"></textarea>
+                    </div>
+                    <button type="submit" class="bg-natureGreen text-white px-6 py-2 rounded hover:bg-green-800 transition">Upload Product</button>
+                    <p id="status-message" class="hidden mt-2 font-semibold"></p>
+                </form>
+            </div>
+
+            <!-- Product List Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-choco text-white">
+                        <tr>
+                            <th class="p-3">Image</th>
+                            <th class="p-3">Name</th>
+                            <th class="p-3">Price</th>
+                            <th class="p-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-product-list" class="divide-y divide-gray-200">
+                        <tr><td colspan="4" class="p-4 text-center text-gray-500">Loading products...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= CATEGORY SECTION ================= -->
+        <section id="section-categories" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Manage Categories</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-semibold text-gray-700">New Category Name</label>
+                    <input type="text" id="new-category-name" class="w-full border p-2 rounded mt-1 outline-none" placeholder="e.g. Herbal Supplements">
+                </div>
+                <button onclick="addCategory()" class="bg-natureGreen text-white px-6 py-2 rounded hover:bg-green-800 transition h-10">Add Category</button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4 border-b pb-2">Existing Categories</h3>
+                <ul class="space-y-3" id="category-list"></ul>
+            </div>
+        </section>
+
+        <!-- ================= BANNER SECTION ================= -->
+        <section id="section-banners" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Manage Homepage Banners</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Upload New Banner (Ratio 16:9 recommended)</label>
+                <div class="flex gap-4">
+                    <input type="file" id="banner-image" accept="image/*" class="flex-1 border p-2 rounded bg-gray-50">
+                    <button onclick="uploadBanner()" id="banner-upload-btn" class="bg-natureGreen text-white px-6 py-2 rounded hover:bg-green-800 transition">Upload</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="banner-list"></div>
+        </section>
+
+        <!-- ================= VIDEO SECTION ================= -->
+        <section id="section-videos" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Manage Video Gallery</h2>
+            
+            <!-- Upload Video Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <h3 class="text-lg font-bold mb-4 border-b pb-2">Add New Facebook Video</h3>
+                <form id="add-video-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Video Title</label>
+                            <input type="text" id="video-title" required placeholder="e.g. Benefits of Black Seed Oil" class="w-full border p-2 rounded outline-none focus:ring-natureGreen focus:border-natureGreen">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Facebook Video URL</label>
+                            <input type="url" id="video-url" required placeholder="https://www.facebook.com/..." class="w-full border p-2 rounded outline-none focus:ring-natureGreen focus:border-natureGreen">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700">Upload Thumbnail</label>
+                            <input type="file" id="video-thumbnail" accept="image/*" required class="w-full border p-2 rounded bg-gray-50 outline-none">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-natureGreen text-white px-6 py-2 rounded hover:bg-green-800 transition">Save Video</button>
+                    <p id="video-status-message" class="hidden mt-2 font-semibold"></p>
+                </form>
+            </div>
+
+            <!-- Video List -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold mb-4 border-b pb-2">Uploaded Videos</h3>
+                <div id="admin-video-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <p class="text-gray-500 col-span-full">Loading videos...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= EDIT MODALS ================= -->
+    <!-- Edit Product Modal -->
+    <div id="edit-product-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[100] px-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div class="bg-natureGreen text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Edit Product</h2>
+                <button onclick="closeEditProductModal()" class="hover:text-red-200"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="edit-product-form" class="space-y-4">
+                    <input type="hidden" id="edit-product-id">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Name</label>
+                            <input type="text" id="edit-product-name" required class="w-full border p-2 rounded outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Price (৳)</label>
+                            <input type="number" id="edit-product-price" required class="w-full border p-2 rounded outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Stock</label>
+                            <input type="number" id="edit-product-stock" required class="w-full border p-2 rounded outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Description</label>
+                        <textarea id="edit-product-description" rows="2" required class="w-full border p-2 rounded outline-none"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-choco text-white font-bold py-2 rounded hover:bg-natureGreen transition">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div id="edit-category-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex justify-center items-center z-[100] px-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-natureGreen text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Edit Category</h2>
+                <button onclick="closeEditCategoryModal()" class="hover:text-red-200"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="edit-category-form" class="space-y-4">
+                    <input type="hidden" id="edit-category-old-name">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Category Name</label>
+                        <input type="text" id="edit-category-new-name" required class="w-full border p-2 rounded outline-none mt-1">
+                    </div>
+                    <button type="submit" class="w-full bg-choco text-white font-bold py-2 rounded hover:bg-natureGreen transition">Update Category</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADMIN LOGIN SCREEN ================= -->
+    <div id="admin-login-screen" class="fixed inset-0 bg-gray-900 z-[999] flex flex-col justify-center items-center">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm text-center">
+            <h1 class="text-3xl font-bold text-natureGreen mb-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</h1>
+            <p class="text-gray-500 mb-6 text-sm">Please enter the master passcode.</p>
+            
+            <input type="password" id="admin-passcode" placeholder="Enter Passcode..." class="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-natureGreen focus:ring-0 outline-none text-center text-xl tracking-widest mb-4">
+            
+            <button onclick="checkAdminPasscode()" class="w-full bg-natureGreen text-white font-bold py-3 rounded-lg hover:bg-green-800 transition shadow-md">
+                Unlock <i class="fa-solid fa-lock-open ml-1"></i>
+            </button>
+            <p id="login-error" class="text-red-500 text-sm mt-3 hidden font-semibold">Incorrect Passcode!</p>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

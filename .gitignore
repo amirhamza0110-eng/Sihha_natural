@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+venv/
+env/
+.env
+
+# Uploads (We will move these to Cloudinary later)
+uploads/
+
+# OS Files
+.DS_Store
