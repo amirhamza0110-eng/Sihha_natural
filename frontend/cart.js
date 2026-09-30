@@ -23,15 +23,15 @@ function toggleCart(forceOpen = false) {
 function addToCart(id, name, price, image) {
     const existingItem = cart.find(item => item.id === id);
     if (existingItem) {
-        existingItem.quantity += 1; // আগে থেকেই থাকলে শুধু পরিমাণ বাড়বে
+        existingItem.quantity += 1; // আগে থেকেই থাকলে শুধু পরিমাণ বাড়বে
     } else {
         cart.push({ id, name, price, image, quantity: 1 }); // নতুন হলে লিস্টে ঢুকবে
     }
     saveCart();
-    toggleCart(true); // কার্ট অ্যাড হওয়ার পর অটোমেটিক ড্রয়ার ওপেন হবে
+    toggleCart(true); // কার্ট অ্যাড হওয়ার পর অটোমেটিক ড্রয়ার ওপেন হবে
 }
 
-// পরিমাণ কমানো বা বাড়ানো
+// পরিমাণ কমানো বা বাড়ানো
 function changeQuantity(id, delta) {
     const item = cart.find(item => item.id === id);
     if (item) {
@@ -79,7 +79,7 @@ function updateCartUI() {
     updateCartCountUI(); // কার্টের কাউন্টার আপডেট করা
 }
 
-// পেজ লোড হওয়ার সাথে সাথে কার্ট আপডেট হবে
+// পেজ লোড হওয়ার সাথে সাথে কার্ট আপডেট হবে
 document.addEventListener("DOMContentLoaded", updateCartUI);
 
 const WHATSAPP_NUMBER = "8801785210338"; // আপনার নাম্বার দিন
@@ -91,9 +91,27 @@ function updateCartCountUI() {
         cartCountEl.innerText = cart.reduce((sum, item) => sum + item.quantity, 0);
     }
 }
-// updateCartUI ফাংশনের একদম শেষে updateCartCountUI() কল করে দিন। 
-// (কোডের ভেতরে যেখানে updateCartUI শেষ হয়েছে সেখানে এই লাইনটা অ্যাড করুন: updateCartCountUI(); )
 
+// ================= PAYMENT TOGGLE & COPY LOGIC (NEW) =================
+function togglePayment(type) {
+    const method = document.querySelector(`input[name="payment_${type}"]:checked`).value;
+    const bkashSection = document.getElementById(`bkash-section-${type}`);
+    
+    if (method === 'bKash') {
+        bkashSection.classList.remove('hidden');
+    } else {
+        bkashSection.classList.add('hidden');
+    }
+}
+
+function copyNumber(elementId) {
+    const copyText = document.getElementById(elementId);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    navigator.clipboard.writeText(copyText.value);
+    
+    alert("bKash Number Copied: " + copyText.value);
+}
 
 // ================= CART CHECKOUT MODAL LOGIC =================
 let cartSubtotalValue = 0;
@@ -104,7 +122,7 @@ function openCartModal() {
         return;
     }
     
-    // কার্ট ড্রয়ার বন্ধ করে পপ-আপ খোলা
+    // কার্ট ড্রয়ার বন্ধ করে পপ-আপ খোলা
     toggleCart(false);
     
     // মোট দাম হিসাব করা
@@ -120,7 +138,18 @@ function closeCartModal() {
 }
 
 function calculateCartTotal() {
-    const deliveryCharge = parseInt(document.getElementById('cart-delivery-area').value);
+    let deliveryCharge = parseInt(document.getElementById('cart-delivery-area').value);
+    
+    // ================= FREE DELIVERY LOGIC =================
+    const alertBox = document.getElementById('free-delivery-alert-cart');
+    
+    if (cartSubtotalValue >= 500) {
+        deliveryCharge = 0; // ৫০০ টাকার বেশি হলে ডেলিভারি 0
+        if(alertBox) alertBox.classList.remove('hidden'); // ফ্রি ডেলিভারি মেসেজ শো করবে
+    } else {
+        if(alertBox) alertBox.classList.add('hidden'); // মেসেজ হাইড করবে
+    }
+
     document.getElementById('cart-bill-delivery').innerText = deliveryCharge;
     
     const total = cartSubtotalValue + deliveryCharge;
@@ -137,6 +166,16 @@ document.getElementById('cart-order-form')?.addEventListener('submit', async fun
     const areaText = areaSelect.options[areaSelect.selectedIndex].text;
     const address = document.getElementById('cart-customer-address').value;
     
+    // Payment Method & TrxID Capture
+    const paymentMethod = document.querySelector('input[name="payment_cart"]:checked').value;
+    const trxId = document.getElementById('trx-id-cart').value;
+
+    // Validation: যদি বিকাশ সিলেক্ট করে কিন্তু TrxID না দেয়
+    if (paymentMethod === 'bKash' && trxId.trim() === "") {
+        alert("অনুগ্রহ করে Transaction ID (TrxID) অথবা নাম্বারের শেষের ৩ ডিজিট দিন!");
+        return;
+    }
+
     const delivery = parseInt(document.getElementById('cart-bill-delivery').innerText);
     const total = parseInt(document.getElementById('cart-bill-total').innerText);
 
@@ -155,8 +194,16 @@ document.getElementById('cart-order-form')?.addEventListener('submit', async fun
         items: orderItems,
         subtotal: cartSubtotalValue,
         delivery_charge: delivery,
-        total: total
+        total: total,
+        payment_method: paymentMethod, // ডাটাবেসে পেমেন্ট মেথড যাচ্ছে
+        trx_id: trxId // ডাটাবেসে TrxID যাচ্ছে
     };
+
+    // সাবমিট বাটন লোডিং স্টেট
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = "Processing... <i class='fa-solid fa-spinner fa-spin ml-2'></i>";
+    submitBtn.disabled = true;
 
     // ২. ডাটাবেসে অর্ডার সেভ করা (API কল)
     try {
@@ -169,20 +216,26 @@ document.getElementById('cart-order-form')?.addEventListener('submit', async fun
         console.error("Order save error:", error);
     }
 
-    // ৩. হোয়াটসঅ্যাপে মেসেজ পাঠানো
+    // ৩. হোয়াটসঅ্যাপে মেসেজ পাঠানো
     let productListTxt = "";
     cart.forEach((item, index) => {
         productListTxt += `${index + 1}. ${item.name} (${item.quantity} pcs) - ৳${item.price * item.quantity}\n`;
     });
 
-    const message = `হ্যালো, আমি ওয়েবসাইট থেকে একটি অর্ডার করতে চাই! 🛍️
+    let paymentDetailsTxt = `*পেমেন্ট মাধ্যম:* ${paymentMethod}\n`;
+    if (paymentMethod === 'bKash') {
+        paymentDetailsTxt += `*TrxID/Last 3 Digits:* ${trxId}\n`;
+    }
+
+    const message = `হ্যালো, আমি ওয়েবসাইট থেকে একটি অর্ডার করতে চাই! 🛍️
 
 *অর্ডারের বিবরণ:*
 ${productListTxt}
 *সাবটোটাল:* ৳${cartSubtotalValue}
-*ডেলিভারি চার্জ:* ৳${delivery} (${areaText})
+*ডেলিভারি চার্জ:* ৳${delivery} ${delivery === 0 ? "(Free Delivery 🎉)" : "(" + areaText + ")"}
 *মোট বিল:* ৳${total}
 
+${paymentDetailsTxt}
 *ডেলিভারি ইনফরমেশন:*
 নাম: ${name}
 ফোন: ${phone}
@@ -191,10 +244,15 @@ ${productListTxt}
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
     
-    // অর্ডার কমপ্লিট হওয়ার পর কার্ট ক্লিয়ার করা
+    // অর্ডার কমপ্লিট হওয়ার পর কার্ট ক্লিয়ার করা
     cart = [];
     saveCart();
     
     closeCartModal();
-    this.reset();
+    this.reset(); // ফর্ম রিসেট করা
+    
+    // পেমেন্ট সেকশন হাইড করা এবং বাটন আগের অবস্থায় ফেরানো
+    document.getElementById('bkash-section-cart')?.classList.add('hidden');
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
 });
