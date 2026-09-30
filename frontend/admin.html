@@ -43,6 +43,10 @@
             <button onclick="switchTab('videos')" id="tab-videos" class="shrink-0 md:w-full whitespace-nowrap flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition text-left">
                 <i class="fa-brands fa-youtube w-5 text-red-400"></i> Videos
             </button>
+            <!-- Offers Tab -->
+            <button onclick="switchTab('offers')" id="tab-offers" class="shrink-0 md:w-full whitespace-nowrap flex items-center gap-3 px-4 py-3 hover:bg-gray-700 rounded-lg transition text-left">
+                <i class="fa-solid fa-gift w-5 text-orange-400"></i> Offers
+            </button>
         </nav>
         
         <div class="p-4 border-t border-gray-600">
@@ -216,7 +220,53 @@
                 </div>
             </div>
         </section>
-    </main>
+        <!-- ================= VIDEO SECTION (আগের কোড এখানে শেষ হবে) ================= -->
+        
+        <!-- ================= OFFERS SECTION (নতুন কোড) ================= -->
+        <section id="section-offers" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6"><i class="fa-solid fa-gift text-natureGreen"></i> Manage Offers</h2>
+            
+            <!-- Add Offer Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <form id="add-offer-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="offer-title" placeholder="Offer Title (e.g. ফ্রি ডেলিভারি!)" required class="border border-gray-300 p-2 rounded focus:outline-natureGreen">
+                    <input type="text" id="offer-desc" placeholder="Description (e.g. ৩টি কিনলে ফ্রি ডেলিভারি)" required class="border border-gray-300 p-2 rounded focus:outline-natureGreen">
+                    <input type="text" id="offer-tag" placeholder="Tag (e.g. Hot Deal / Limited Time)" required class="border border-gray-300 p-2 rounded focus:outline-natureGreen">
+                    
+                    <select id="offer-theme" class="border border-gray-300 p-2 rounded focus:outline-natureGreen cursor-pointer">
+                        <option value="orange">Orange Theme (অরেঞ্জ গ্রেডিয়েন্ট)</option>
+                        <option value="green">Green Theme (সবুজ গ্রেডিয়েন্ট)</option>
+                        <option value="blue">Blue Theme (নীল গ্রেডিয়েন্ট)</option>
+                    </select>
+
+                    <select id="offer-icon" class="border border-gray-300 p-2 rounded focus:outline-natureGreen cursor-pointer">
+                        <option value="fa-truck-fast">Delivery Truck (ডেলিভারি অফার)</option>
+                        <option value="fa-gift">Gift Box (গিফট অফার)</option>
+                        <option value="fa-box-open">Open Box (প্যাকেজ অফার)</option>
+                    </select>
+
+                    <button type="submit" class="bg-natureGreen text-white font-bold py-2 px-4 rounded md:col-span-2 hover:bg-choco transition">Add New Offer</button>
+                </form>
+            </div>
+
+            <!-- Offers Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table class="min-w-full text-left border-collapse">
+                    <thead class="bg-lightGreen text-choco">
+                        <tr>
+                            <th class="py-3 px-4 border-b">Title</th>
+                            <th class="py-3 px-4 border-b">Tag & Theme</th>
+                            <th class="py-3 px-4 border-b">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="offers-table-body">
+                        <!-- Offers will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+    </main> 
 
     <!-- ================= EDIT MODALS ================= -->
     <!-- Edit Product Modal -->

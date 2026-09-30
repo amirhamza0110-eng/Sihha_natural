@@ -4,7 +4,8 @@ let allProducts = [];
 const API_URL = "https://sihha-natural.onrender.com/api/products/";
 const BANNERS_API = "https://sihha-natural.onrender.com/api/banners/";
 const CATEGORIES_API = "https://sihha-natural.onrender.com/api/categories/";
-const VIDEOS_API = "https://sihha-natural.onrender.com/api/videos/"; // নতুন ভিডিও API
+const VIDEOS_API = "https://sihha-natural.onrender.com/api/videos/"; 
+const OFFERS_API = "https://sihha-natural.onrender.com/api/offers";
 
 const productContainer = document.getElementById("product-container");
 const loadingMsg = document.getElementById("loading-msg");
@@ -92,7 +93,51 @@ async function fetchProducts() {
         }
     }
 }
-
+// ================= LOAD OFFERS =================
+async function loadOffers() {
+    try {
+        const response = await fetch(OFFERS_API);
+        const offers = await response.json();
+        
+        const offersSection = document.getElementById('offers-section');
+        const offersContainer = document.getElementById('offers-container');
+        
+        // যদি ডাটাবেসে অফার থাকে, তাহলে সেকশনটা শো করবে
+        if (offers.length > 0) {
+            offersSection.classList.remove('hidden'); // hidden ক্লাস রিমুভ করে দিলাম
+            
+            offersContainer.innerHTML = offers.map(off => {
+                // থিম অনুযায়ী কালার সেট করা
+                let gradientClass = "from-orange-400 to-red-500";
+                let badgeText = "text-red-500";
+                
+                if (off.theme === "green") {
+                    gradientClass = "from-green-500 to-emerald-700";
+                    badgeText = "text-green-600";
+                } else if (off.theme === "blue") {
+                    gradientClass = "from-blue-400 to-indigo-600";
+                    badgeText = "text-blue-600";
+                }
+                
+                return `
+                <div class="bg-gradient-to-r ${gradientClass} rounded-xl p-5 text-white shadow-md flex items-center justify-between hover:scale-[1.02] transition-transform cursor-pointer">
+                    <div>
+                        <span class="bg-white ${badgeText} text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide mb-2 inline-block">${off.tag}</span>
+                        <h3 class="text-xl font-extrabold mb-1">${off.title}</h3>
+                        <p class="text-sm opacity-90">${off.description}</p>
+                    </div>
+                    <i class="fa-solid ${off.icon} text-5xl opacity-80 ml-3"></i>
+                </div>
+                `;
+            }).join('');
+        } else {
+            // অফার না থাকলে পুরো সেকশনটা হাইড হয়ে থাকবে
+            offersSection.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error("Error loading offers:", error);
+    }
+}
 // ================= DISPLAY PRODUCTS HTML =================
 function displayProducts(products) {
     if (!productContainer) return;
@@ -204,5 +249,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadHomepageBanners();
     loadHomepageCategories();
     fetchProducts();
-    loadVideos(); // ভিডিও কল করা হলো
+    loadVideos();
+    loadOffers();
 });

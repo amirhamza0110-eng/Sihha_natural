@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", checkAdminStatus);
 
 // ================= TAB SWITCHING LOGIC (UPDATED WITH VIDEOS) =================
 function switchTab(tabName) {
-    const tabs = ['products', 'categories', 'banners', 'orders', 'videos']; // videos যোগ করা হয়েছে
+    const tabs = ['products', 'categories', 'banners', 'orders', 'videos', 'offers']; // videos & offers যোগ করা হয়েছে
 
     tabs.forEach(t => {
         // সব সেকশন হাইড করা
@@ -125,27 +125,6 @@ async function addCategory() {
         }
     } catch(e) {
         alert("Server error connecting to backend.");
-    }
-}
-
-async function deleteVideo(id) {
-    if(!confirm("Are you sure you want to delete this video?")) return;
-    
-    try {
-        const response = await fetch(`https://sihha-natural.onrender.com/api/videos/${id}`, { 
-            method: 'DELETE' 
-        });
-        
-        if(response.ok) {
-            alert("✅ Video deleted successfully!");
-            loadAdminVideos(); // লিস্ট সাথে সাথে আপডেট হবে
-        } else {
-            const err = await response.json();
-            alert("❌ Failed: " + (err.detail || "Server error"));
-        }
-    } catch (error) {
-        console.error("Delete Error:", error);
-        alert("❌ Error connecting to server.");
     }
 }
 
@@ -503,7 +482,7 @@ async function deleteSelectedOrders() {
     const idsToDelete = Array.from(checkedBoxes).map(cb => cb.value);
 
     try {
-        // সবগুলো রিকোয়েস্ট একসাথে পাঠানো হচ্ছে যেন দ্রুত ডিলিট হয়
+        // সবগুলো রিকোয়েস্ট একসাথে পাঠানো হচ্ছে যেন দ্রুত ডিলিট হয়
         await Promise.all(idsToDelete.map(id => 
             fetch(`${ORDERS_API}${id}`, { method: 'DELETE' })
         ));
@@ -534,7 +513,7 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
-// ================= VIDEO MANAGEMENT (NEW) =================
+// ================= VIDEO MANAGEMENT =================
 const VIDEOS_API = "https://sihha-natural.onrender.com/api/videos/";
 
 async function loadAdminVideos() {
@@ -572,6 +551,27 @@ async function loadAdminVideos() {
     }
 }
 
+async function deleteVideo(id) {
+    if(!confirm("Are you sure you want to delete this video?")) return;
+    
+    try {
+        const response = await fetch(`${VIDEOS_API}${id}`, { 
+            method: 'DELETE' 
+        });
+        
+        if(response.ok) {
+            alert("✅ Video deleted successfully!");
+            loadAdminVideos(); 
+        } else {
+            const err = await response.json();
+            alert("❌ Failed: " + (err.detail || "Server error"));
+        }
+    } catch (error) {
+        console.error("Delete Error:", error);
+        alert("❌ Error connecting to server.");
+    }
+}
+
 // Video Form Submit Logic
 const videoForm = document.getElementById('add-video-form');
 if (videoForm) {
@@ -592,7 +592,7 @@ if (videoForm) {
         try {
             const response = await fetch(VIDEOS_API, {
                 method: "POST",
-                body: formData // Ekhane JSON er bodole FormData pathano hocche
+                body: formData 
             });
 
             if (response.ok) {
@@ -614,12 +614,86 @@ if (videoForm) {
     });
 }
 
+// ================= OFFERS MANAGEMENT (NEW) =================
+const OFFERS_API = "https://sihha-natural.onrender.com/api/offers";
+
+async function loadOffers() {
+    try {
+        const res = await fetch(OFFERS_API);
+        const offers = await res.json();
+        const tbody = document.getElementById('offers-table-body');
+        
+        if (!tbody) return;
+
+        if (offers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No offers running right now.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = offers.map(off => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="py-2 px-4 font-bold text-choco">${off.title}</td>
+                <td class="py-2 px-4">
+                    <span class="bg-gray-200 text-xs px-2 py-1 rounded font-semibold">${off.tag}</span> 
+                    <span class="text-sm text-gray-500 ml-2">(${off.theme})</span>
+                </td>
+                <td class="py-2 px-4">
+                    <button onclick="deleteOffer('${off.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error("Error loading offers:", error);
+    }
+}
+
+document.getElementById('add-offer-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const newOffer = {
+        title: document.getElementById('offer-title').value,
+        description: document.getElementById('offer-desc').value,
+        tag: document.getElementById('offer-tag').value,
+        theme: document.getElementById('offer-theme').value,
+        icon: document.getElementById('offer-icon').value
+    };
+
+    try {
+        const res = await fetch(OFFERS_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newOffer)
+        });
+        if(res.ok) {
+            alert("Offer added successfully!");
+            document.getElementById('add-offer-form').reset();
+            loadOffers();
+        }
+    } catch (error) {
+        console.error("Error adding offer:", error);
+        alert("Failed to add offer.");
+    }
+});
+
+async function deleteOffer(id) {
+    if(!confirm("Are you sure you want to delete this offer?")) return;
+    try {
+        const res = await fetch(`${OFFERS_API}/${id}`, { method: "DELETE" });
+        if(res.ok) {
+            loadOffers();
+        }
+    } catch (error) {
+        console.error("Error deleting offer:", error);
+    }
+}
+
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
     loadCategories();
     loadBanners();
     loadAdminProducts();
     fetchOrders();
-    loadAdminVideos(); // লোড ভিডিও কল করা হলো
+    loadAdminVideos(); 
+    loadOffers(); // অফার লোড কল করা হলো
     setInterval(fetchOrders, 30000); // প্রতি 30 সেকেন্ডে অর্ডার চেক করবে
 });
