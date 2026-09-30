@@ -67,6 +67,18 @@ function closeOrderModal() {
     document.getElementById('order-modal').classList.add('hidden');
 }
 
+// ================= PAYMENT TOGGLE & COPY LOGIC (DIRECT) =================
+function togglePayment(type) {
+    const method = document.querySelector(`input[name="payment_${type}"]:checked`).value;
+    const bkashSection = document.getElementById(`bkash-section-${type}`);
+    
+    if (method === 'bKash') {
+        bkashSection.classList.remove('hidden');
+    } else {
+        bkashSection.classList.add('hidden');
+    }
+}
+
 // ================= FREE DELIVERY & CALCULATION (DIRECT ORDER) =================
 function calculateTotal() {
     let price = parseFloat(document.getElementById('bill-price').innerText) || 0;
@@ -96,10 +108,10 @@ function calculateTotal() {
     document.getElementById('bill-delivery').innerText = deliveryCharge;
     document.getElementById('bill-total').innerText = price + deliveryCharge;
 }
+
 // ================= DIRECT ORDER FORM SUBMISSION =================
 const orderForm = document.getElementById('order-form');
 if (orderForm) {
-    // লক্ষ্য করুন: ফাংশনের আগে async অ্যাড করা হয়েছে
     orderForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -113,7 +125,17 @@ if (orderForm) {
         const delivery = parseInt(document.getElementById('bill-delivery').innerText);
         const total = parseInt(document.getElementById('bill-total').innerText);
 
-        // ১. ব্যাকএন্ডের জন্য ডাটা সাজানো
+        // ১. পেমেন্ট মেথড এবং TrxID ক্যাপচার করা
+        const paymentMethod = document.querySelector('input[name="payment_direct"]:checked').value;
+        const trxId = document.getElementById('trx-id-direct').value;
+
+        // ২. যদি বিকাশ সিলেক্ট করে কিন্তু TrxID বা লাস্ট ডিজিট না দেয়
+        if (paymentMethod === 'bKash' && trxId.trim() === "") {
+            alert("অনুগ্রহ করে Transaction ID (TrxID) অথবা নাম্বারের শেষের ৩ ডিজিট দিন!");
+            return;
+        }
+
+        // ৩. ব্যাকএন্ডের জন্য ডাটা সাজানো (পেমেন্ট ইনফো সহ)
         const orderData = {
             customer_name: name,
             customer_phone: phone,
@@ -126,10 +148,18 @@ if (orderForm) {
             }],
             subtotal: price,
             delivery_charge: delivery,
-            total: total
+            total: total,
+            payment_method: paymentMethod,
+            trx_id: trxId
         };
 
-        // ২. ডাটাবেসে অর্ডার সেভ করা (API কল)
+        // সাবমিট বাটন লোডিং করা
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = "Processing... <i class='fa-solid fa-spinner fa-spin ml-2'></i>";
+        submitBtn.disabled = true;
+
+        // ৪. ডাটাবেসে অর্ডার সেভ করা (API কল)
         try {
             await fetch('https://sihha-natural.onrender.com/api/orders/', {
                 method: 'POST',
@@ -140,24 +170,34 @@ if (orderForm) {
             console.error("Order save error:", error);
         }
 
-        // ৩. হোয়াটসঅ্যাপে মেসেজ পাঠানো
-        const message = `হ্যালো, আমি একটি অর্ডার করতে চাই! 🛍️
+        // ৫. হোয়াটসঅ্যাপে মেসেজ প্রস্তুত করা (পেমেন্ট ও TrxID সহ)
+        let paymentDetailsTxt = `*পেমেন্ট মাধ্যম:* ${paymentMethod}\n`;
+        if (paymentMethod === 'bKash') {
+            paymentDetailsTxt += `*TrxID/Last 3 Digits:* ${trxId}\n📌 *Note: Please check the TrxID and confirm.*\n`;
+        }
+
+        const message = `হ্যালো, আমি একটি ডাইরেক্ট অর্ডার করতে চাই! 🛍️
         
 *প্রোডাক্ট:* ${currentProductName}
 *দাম:* ৳${price}
-*ডেলিভারি চার্জ:* ৳${delivery} (${areaText})
+*ডেলিভারি চার্জ:* ৳${delivery} ${delivery === 0 ? "(Free Delivery 🎉)" : "(" + areaText + ")"}
 *মোট বিল:* ৳${total}
 
+${paymentDetailsTxt}
 *ডেলিভারি ইনফরমেশন:*
 নাম: ${name}
 ফোন: ${phone}
 ঠিকানা: ${address}`;
 
         const encodedMessage = encodeURIComponent(message);
-        // cart.js এ থাকা WHATSAPP_NUMBER ভ্যারিয়েবলটাই এখানে কাজ করবে
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
         
         closeOrderModal();
         this.reset();
+
+        // পেমেন্ট সেকশন হাইড করা এবং বাটন আগের অবস্থায় ফেরানো
+        document.getElementById('bkash-section-direct')?.classList.add('hidden');
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
     });
 }
