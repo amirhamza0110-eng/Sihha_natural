@@ -233,7 +233,7 @@ document.getElementById('cart-order-form')?.addEventListener('submit', async fun
 
     let paymentDetailsTxt = `*পেমেন্ট মাধ্যম:* ${paymentMethod}\n`;
     if (paymentMethod === 'bKash') {
-        paymentDetailsTxt += `*TrxID/Last 3 Digits:* ${trxId}\n`;
+        paymentDetailsTxt += `*TrxID/Last 3 Digits:* ${trxId}\n📌 *Note: Please check the TrxID and confirm.*\n`;
     }
 
     const message = `হ্যালো, আমি ওয়েবসাইট থেকে একটি অর্ডার করতে চাই! 🛍️
