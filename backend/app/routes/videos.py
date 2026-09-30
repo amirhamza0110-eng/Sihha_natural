@@ -1,9 +1,8 @@
 import os
-import uuid
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from app.database import db
 from bson import ObjectId
-import cloudinary.uploader # Cloudinary ইম্পোর্ট করা হলো
+import cloudinary.uploader
 
 router = APIRouter()
 video_collection = db["videos"]
@@ -23,22 +22,25 @@ def get_videos():
 @router.post("/")
 async def add_video(title: str = Form(...), url: str = Form(...), thumbnail: UploadFile = File(...)):
     try:
-        # ১. Cloudinary-তে ছবি আপলোড
-        result = cloudinary.uploader.upload(thumbnail.file, folder="videos")
-        thumbnail_url = result.get("secure_url") # Cloudinary থেকে লাইভ লিংক পেয়ে গেলাম
+        # ১. ফাইল রিড করা (যাতে Cloudinary পারফেক্টলি ডাটা পায়)
+        contents = await thumbnail.read()
         
-        # ২. ডাটাবেসে সেভ
+        # ২. Cloudinary-তে আপলোড
+        result = cloudinary.uploader.upload(contents, folder="videos")
+        thumbnail_url = result.get("secure_url") 
+        
+        # ৩. ডাটাবেসে সেভ
         new_video = {
             "title": title,
             "url": url,
             "thumbnail_url": thumbnail_url
         }
         db_result = video_collection.insert_one(new_video)
-        return {"id": str(db_result.inserted_id), "message": "Video and thumbnail added successfully"}
+        return {"id": str(db_result.inserted_id), "message": "Video added successfully"}
         
     except Exception as e:
-        print("Upload Error:", e)
-        raise HTTPException(status_code=500, detail="Failed to upload thumbnail")
+        print("Video Upload Error:", str(e))
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @router.delete("/{video_id}")
 def delete_video(video_id: str):
@@ -47,7 +49,6 @@ def delete_video(video_id: str):
         if not vid:
             raise HTTPException(status_code=404, detail="Video not found")
         
-        # ডাটাবেস থেকে ডিলিট
         video_collection.delete_one({"_id": ObjectId(video_id)})
         return {"message": "Video deleted successfully"}
 
