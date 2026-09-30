@@ -67,14 +67,35 @@ function closeOrderModal() {
     document.getElementById('order-modal').classList.add('hidden');
 }
 
+// ================= FREE DELIVERY & CALCULATION (DIRECT ORDER) =================
 function calculateTotal() {
-    const deliveryCharge = parseInt(document.getElementById('delivery-area').value);
-    document.getElementById('bill-delivery').innerText = deliveryCharge;
+    let price = parseFloat(document.getElementById('bill-price').innerText) || 0;
+    let deliveryCharge = parseInt(document.getElementById('delivery-area').value);
     
-    const total = currentProductPrice + deliveryCharge;
-    document.getElementById('bill-total').innerText = total;
-}
+    const alertBox = document.getElementById('free-delivery-alert-direct');
 
+    if (price >= 500) {
+        // ৫০০ বা তার বেশি হলে ফ্রি ডেলিভারি
+        deliveryCharge = 0;
+        if (alertBox) {
+            alertBox.className = "text-sm font-bold p-2.5 rounded-lg border flex items-center gap-2 bg-green-100 text-green-800 border-green-300 animate-pulse mt-2";
+            alertBox.innerHTML = '<i class="fa-solid fa-gift text-red-500 text-lg"></i> অভিনন্দন! আপনি ফ্রি ডেলিভারি পেয়েছেন!';
+        }
+    } else if (price > 0) {
+        // ৫০০ এর কম হলে আপসেল মেসেজ
+        let neededAmount = 500 - price;
+        if (alertBox) {
+            alertBox.className = "text-sm font-bold p-2.5 rounded-lg border flex items-center gap-2 bg-orange-100 text-orange-800 border-orange-300 mt-2";
+            alertBox.innerHTML = `<i class="fa-solid fa-cart-plus text-orange-600 text-lg"></i> আর মাত্র ৳${neededAmount} টাকার প্রোডাক্ট নিলেই ডেলিভারি ফ্রি!`;
+        }
+    } else {
+        if (alertBox) alertBox.className = "hidden";
+    }
+
+    // বিল আপডেট করা
+    document.getElementById('bill-delivery').innerText = deliveryCharge;
+    document.getElementById('bill-total').innerText = price + deliveryCharge;
+}
 // ================= DIRECT ORDER FORM SUBMISSION =================
 const orderForm = document.getElementById('order-form');
 if (orderForm) {

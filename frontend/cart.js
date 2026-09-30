@@ -140,22 +140,31 @@ function closeCartModal() {
 function calculateCartTotal() {
     let deliveryCharge = parseInt(document.getElementById('cart-delivery-area').value);
     
-    // ================= FREE DELIVERY LOGIC =================
+    // ================= FREE DELIVERY & UPSELL LOGIC =================
     const alertBox = document.getElementById('free-delivery-alert-cart');
     
     if (cartSubtotalValue >= 500) {
-        deliveryCharge = 0; // ৫০০ টাকার বেশি হলে ডেলিভারি 0
-        if(alertBox) alertBox.classList.remove('hidden'); // ফ্রি ডেলিভারি মেসেজ শো করবে
+        deliveryCharge = 0; // 500 টাকার বেশি হলে ডেলিভারি 0
+        if(alertBox) {
+            // সবুজ রঙের সাকসেস মেসেজ
+            alertBox.className = "text-sm font-bold p-2.5 rounded-lg border flex items-center gap-2 bg-green-100 text-green-800 border-green-300 animate-pulse mt-2";
+            alertBox.innerHTML = '<i class="fa-solid fa-gift text-red-500 text-lg"></i> অভিনন্দন! আপনি ফ্রি ডেলিভারি পেয়েছেন!';
+        }
+    } else if (cartSubtotalValue > 0) {
+        let neededAmount = 500 - cartSubtotalValue;
+        if(alertBox) {
+            // কমলা রঙের ওয়ার্নিং মেসেজ (Upsell)
+            alertBox.className = "text-sm font-bold p-2.5 rounded-lg border flex items-center gap-2 bg-orange-100 text-orange-800 border-orange-300 mt-2";
+            alertBox.innerHTML = `<i class="fa-solid fa-cart-plus text-orange-600 text-lg"></i> আর মাত্র ৳${neededAmount} টাকার প্রোডাক্ট নিলেই ডেলিভারি ফ্রি!`;
+        }
     } else {
-        if(alertBox) alertBox.classList.add('hidden'); // মেসেজ হাইড করবে
+        if(alertBox) alertBox.className = "hidden";
     }
 
     document.getElementById('cart-bill-delivery').innerText = deliveryCharge;
-    
     const total = cartSubtotalValue + deliveryCharge;
     document.getElementById('cart-bill-total').innerText = total;
 }
-
 // ================= CART WHATSAPP SUBMIT =================
 document.getElementById('cart-order-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
