@@ -102,6 +102,43 @@
             <button onclick="nextSlide()" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 p-2 rounded-full text-choco hover:bg-white hidden group-hover:block"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
     </section>
+<!-- Facebook Welcome & Follow Popup Modal -->
+<div id="fb-popup-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex justify-center items-center z-[150] px-4 backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 relative text-center">
+        
+        <!-- Close Button -->
+        <button onclick="tryCloseFbPopup()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+
+        <!-- Top Header Banner -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 pb-8">
+            <div class="w-16 h-16 bg-white text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md text-3xl">
+                <i class="fa-brands fa-facebook-f"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold mb-1">আমাদের ফেসবুক পেজে স্বাগতম!</h2>
+            <p class="text-blue-100 text-sm">প্রতিদিনের আপডেট পেতে  যুক্ত থাকুন।</p>
+        </div>
+
+        <!-- Body Content -->
+        <div class="p-6 pt-4">
+            <p id="fb-popup-msg" class="text-gray-700 text-sm mb-6 leading-relaxed">
+                আমাদের নতুন পেজটিতে আপনার একটি ছোট্ট সমর্থন আমাদের জন্য অনেক কিছু! ❤️
+            </p>
+
+            <div class="space-y-3">
+                <!-- Facebook Page Link Button with your actual link -->
+                <a href="https://www.facebook.com/profile.php?id=61594077347516" target="_blank" onclick="closeFbPopupPermanently()" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition shadow-lg flex items-center justify-center gap-2 text-base">
+                    <i class="fa-brands fa-facebook text-xl"></i> Please follow the page (Follow Us)
+                </a>
+                
+                <button onclick="tryCloseFbPopup()" class="w-full bg-gray-100 text-gray-600 font-semibold py-2.5 px-4 rounded-xl hover:bg-gray-200 transition text-sm">
+                    Not Interested (Skip)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>    
 <!-- ================= SPECIAL OFFERS SECTION ================= -->
 <section id="offers-section" class="py-6 bg-white hidden">
     <div class="container mx-auto px-4">

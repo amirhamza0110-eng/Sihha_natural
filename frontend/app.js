@@ -243,6 +243,48 @@ async function loadVideos() {
         }
     }
 }
+// ================= FACEBOOK POPUP LOGIC =================
+
+// পেজ লোড হওয়ার ২ সেকেন্ড পর পপ-আপ শো করবে
+document.addEventListener("DOMContentLoaded", () => {
+    // sessionStorage চেক করা যাতে বারবার রিলোড দিলে পপ-আপ বিরক্ত না করে (সেশনপ্রতি একবার দেখাবে)
+    if (!sessionStorage.getItem('fb_popup_shown')) {
+        setTimeout(() => {
+            const modal = document.getElementById('fb-popup-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }, 2000); // ২ সেকেন্ড ডিলে
+    }
+});
+
+// কাস্টমার যখন কাটতে (Cross এ ক্লিক) যাবে
+let closeAttemptCount = 0;
+
+function tryCloseFbPopup() {
+    const msgEl = document.getElementById('fb-popup-msg');
+    
+    if (closeAttemptCount === 0) {
+        // প্রথমবার কাটতে গেলে ইমোশনাল মেসেজ দিবে
+        if (msgEl) {
+            msgEl.innerHTML = `<span class="text-red-500 font-bold block text-base mb-1">🥺 প্লিজ ভাই, স্কিপ করবেন না!</span> 
+            আমাদের নতুন পেজ, আপনার একটা ছোট লাইক বা ফলো আমাদের অনেক দূর নিয়ে যাবে। সাপোর্ট করুন প্লিজ! 🙏`;
+        }
+        closeAttemptCount++;
+    } else {
+        // দ্বিতীয়বার কাটতে চাইলে পপ-আপ বন্ধ হয়ে যাবে
+        closeFbPopupPermanently();
+    }
+}
+
+function closeFbPopupPermanently() {
+    const modal = document.getElementById('fb-popup-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    // সেশনে আর দেখাবে না যেন বিরক্ত না হয়
+    sessionStorage.setItem('fb_popup_shown', 'true');
+}
 
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
