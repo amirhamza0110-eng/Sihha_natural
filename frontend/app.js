@@ -267,7 +267,7 @@ function tryCloseFbPopup() {
     if (closeAttemptCount === 0) {
         // প্রথমবার কাটতে গেলে ইমোশনাল মেসেজ দিবে
         if (msgEl) {
-            msgEl.innerHTML = `<span class="text-red-500 font-bold block text-base mb-1">🥺 প্লিজ ভাই, স্কিপ করবেন না!</span> 
+            msgEl.innerHTML = `<span class="text-red-500 font-bold block text-base mb-1">🥺 প্লিজ ভাই/বোন, স্কিপ করবেন না!</span> 
             আমাদের নতুন পেজ, আপনার একটা ছোট লাইক বা ফলো আমাদের অনেক দূর নিয়ে যাবে। সাপোর্ট করুন প্লিজ! 🙏`;
         }
         closeAttemptCount++;
