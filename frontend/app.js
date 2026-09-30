@@ -167,6 +167,7 @@ async function loadVideos() {
     try {
         const response = await fetch(VIDEOS_API);
         const videos = await response.json();
+        console.log("Video Data From Backend:", videos);
         
         if(videoLoadingMsg) videoLoadingMsg.style.display = "none";
 
