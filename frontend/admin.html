@@ -204,7 +204,7 @@
                     <button id="download-monthly-report-btn" type="button" class="rounded bg-natureGreen px-4 py-2 text-sm font-semibold text-white hover:bg-green-800" title="Download selected month accounting report">
                         <i class="fa-solid fa-file-csv mr-2"></i>Download CSV
                     </button>
-                    <button id="refresh-accounting-btn" type="button" class="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50" title="Refresh selected month accounting data">
+                    <button id="refresh-btn" type="button" class="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50" title="Refresh selected month accounting data">
                         <i class="fa-solid fa-rotate-right"></i><span class="ml-2">Refresh</span>
                     </button>
                 </div>
@@ -306,6 +306,10 @@
                             <label class="flex items-center gap-2"><input type="radio" name="offline-item-mode" value="custom"> Custom product</label>
                         </div>
                     </fieldset>
+                    <div>
+                        <label for="offline-sale-date" class="mb-1 block text-sm font-semibold text-gray-700">Sale date and time <span class="font-normal text-gray-400">(optional)</span></label>
+                        <input id="offline-sale-date" type="datetime-local" class="w-full rounded border p-2">
+                    </div>
                     <div id="offline-existing-fields" class="space-y-3">
                         <div>
                             <label for="offline-sale-product" class="mb-1 block text-sm font-semibold text-gray-700">Product</label>

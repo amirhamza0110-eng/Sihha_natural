@@ -32,6 +32,7 @@ class OrderCreate(BaseModel):
     delivery_charge: float
     total: float
     order_type: Literal["online", "offline"] = "online"
+    date: Optional[datetime] = None
 
 
 def _normalize_order_items(items: List[OrderItem], order_type: str):
@@ -120,11 +121,14 @@ def _serialize_order(order):
 @router.post("/")
 def create_order(order: OrderCreate):
     order_dict = order.dict()
+    sale_date = order_dict.pop("date", None)
     order_items, total_profit = _normalize_order_items(order.items, order.order_type)
     order_dict["items"] = order_items
     order_dict["total_profit"] = total_profit
     order_dict["status"] = "Pending"
-    order_dict["created_at"] = datetime.now()
+    order_dict["created_at"] = (
+        sale_date if order.order_type == "offline" and sale_date else datetime.now()
+    )
 
     inserted = db.orders.insert_one(order_dict)
     return {"message": "Order saved successfully!", "order_id": str(inserted.inserted_id)}
@@ -153,6 +157,7 @@ def get_order(order_id: str):
 def update_order(order_id: str, order: OrderCreate):
     existing = _get_order(order_id)
     order_dict = order.dict()
+    order_dict.pop("date", None)
     order_items, total_profit = _normalize_order_items(order.items, order.order_type)
     order_dict["items"] = order_items
     order_dict["total_profit"] = total_profit

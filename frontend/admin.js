@@ -1021,6 +1021,7 @@ document.getElementById("offline-sale-form").addEventListener("submit", async ev
 
     const unitPrice = customMode ? item.custom_selling_price : item.price;
     const subtotal = unitPrice * quantity;
+    const saleDate = document.getElementById("offline-sale-date").value;
     const sale = {
         customer_name: "Walk-in customer",
         customer_phone: "N/A",
@@ -1030,7 +1031,8 @@ document.getElementById("offline-sale-form").addEventListener("submit", async ev
         subtotal,
         delivery_charge: 0,
         total: subtotal,
-        order_type: "offline"
+        order_type: "offline",
+        ...(saleDate ? { date: saleDate } : {})
     };
 
     try {
@@ -1256,7 +1258,6 @@ async function downloadCurrentMonthReport() {
     }
 }
 
-document.getElementById("refresh-accounting-btn")?.addEventListener("click", refreshAccounting);
 document.getElementById("download-monthly-report-btn")?.addEventListener("click", downloadCurrentMonthReport);
 document.getElementById("accounting-month")?.addEventListener("change", refreshAccounting);
 document.getElementById("accounting-year")?.addEventListener("change", refreshAccounting);
@@ -1264,6 +1265,7 @@ document.getElementById("accounting-year")?.addEventListener("change", refreshAc
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
     initializeAccountingPeriod();
+    document.getElementById("refresh-btn")?.addEventListener("click", refreshAccounting);
     refreshAccounting();
     loadOfflineSaleProducts();
     updateOfflineSaleMode();
