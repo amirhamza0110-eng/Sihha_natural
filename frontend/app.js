@@ -180,6 +180,13 @@ function displayProducts(products) {
                 </button>
             </div>
         `;
+        const weight = product.weight == null ? "" : String(product.weight).trim();
+        if (weight) {
+            const weightBadge = document.createElement("span");
+            weightBadge.className = "mt-1 inline-block rounded bg-lightGreen px-2 py-0.5 text-xs font-semibold text-natureGreen";
+            weightBadge.textContent = weight;
+            productCard.querySelector("h3")?.after(weightBadge);
+        }
         productContainer.appendChild(productCard);
     });
 }

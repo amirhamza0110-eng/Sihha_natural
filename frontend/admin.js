@@ -965,6 +965,8 @@ document.getElementById("inventory-purchase-form").addEventListener("submit", as
 
 document.getElementById("offline-sale-form").addEventListener("submit", async event => {
     event.preventDefault();
+    const saleForm = document.getElementById("offline-sale-form");
+    if (!saleForm) return;
     const customMode = document.querySelector('input[name="offline-item-mode"]:checked')?.value === "custom";
     const quantity = Number(document.getElementById("offline-sale-quantity").value);
     let item;
@@ -1019,7 +1021,7 @@ document.getElementById("offline-sale-form").addEventListener("submit", async ev
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(sale)
         });
-        event.currentTarget.reset();
+        saleForm.reset();
         updateOfflineSaleMode();
         await Promise.all([refreshAccounting(), fetchOrders(), loadOfflineSaleProducts()]);
         alert("Offline sale saved.");
@@ -1204,6 +1206,40 @@ async function deleteInventoryPurchase(purchaseId) {
         alert(`Could not delete purchase: ${error.message}`);
     }
 }
+
+async function downloadCurrentMonthReport() {
+    const button = document.getElementById("download-monthly-report-btn");
+    const status = document.getElementById("report-download-status");
+    if (!button) return;
+
+    button.disabled = true;
+    if (status) status.textContent = "Preparing CSV report...";
+    try {
+        const response = await fetch(`${ACCOUNTING_API}/reports/monthly/download`);
+        if (!response.ok) throw new Error(`Report download failed (${response.status})`);
+
+        const reportBlob = await response.blob();
+        const downloadUrl = URL.createObjectURL(reportBlob);
+        const link = document.createElement("a");
+        const now = new Date();
+        link.href = downloadUrl;
+        link.download = `sihha-monthly-report-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        if (status) status.textContent = "CSV report downloaded.";
+    } catch (error) {
+        console.error("Monthly report download error:", error);
+        if (status) status.textContent = "Could not download the report.";
+        alert(`Could not download report: ${error.message}`);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+document.getElementById("refresh-accounting-btn")?.addEventListener("click", refreshAccounting);
+document.getElementById("download-monthly-report-btn")?.addEventListener("click", downloadCurrentMonthReport);
 
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
