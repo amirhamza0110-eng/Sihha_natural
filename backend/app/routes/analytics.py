@@ -1,20 +1,19 @@
-from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.database import db
+from app.date_utils import month_window
 
 router = APIRouter()
 
 
 @router.get("/monthly")
-def get_monthly_analytics():
-    now = datetime.now()
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if month_start.month == 12:
-        next_month_start = month_start.replace(year=month_start.year + 1, month=1)
-    else:
-        next_month_start = month_start.replace(month=month_start.month + 1)
+def get_monthly_analytics(
+    month: Optional[int] = Query(None, ge=1, le=12),
+    year: Optional[int] = Query(None, ge=2000, le=2100),
+):
+    month_start, next_month_start = month_window(month, year)
 
     monthly_order_summary = next(
         db.orders.aggregate(

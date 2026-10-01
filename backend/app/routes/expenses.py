@@ -2,11 +2,12 @@ from datetime import datetime
 from typing import Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
 from app.cloudinary_utils import delete_bill_image, upload_bill_image
 from app.database import db
+from app.date_utils import month_window
 
 router = APIRouter()
 
@@ -82,10 +83,16 @@ async def create_expense(
 
 
 @router.get("/")
-def get_expenses():
+def get_expenses(
+    month: Optional[int] = Query(None, ge=1, le=12),
+    year: Optional[int] = Query(None, ge=2000, le=2100),
+):
+    start, end = month_window(month, year)
     return [
         _serialize_expense(expense)
-        for expense in db.expenses.find().sort("date", -1)
+        for expense in db.expenses.find(
+            {"date": {"$gte": start, "$lt": end}}
+        ).sort("date", -1)
     ]
 
 

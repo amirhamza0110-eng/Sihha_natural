@@ -730,6 +730,24 @@ async function deleteOffer(id) {
 const ACCOUNTING_API = "https://sihha-natural.onrender.com/api";
 let accountingOrders = [];
 
+function getAccountingPeriod() {
+    const now = new Date();
+    return {
+        month: document.getElementById("accounting-month")?.value || String(now.getMonth() + 1),
+        year: document.getElementById("accounting-year")?.value || String(now.getFullYear())
+    };
+}
+
+function accountingPeriodQuery() {
+    return new URLSearchParams(getAccountingPeriod()).toString();
+}
+
+function initializeAccountingPeriod() {
+    const now = new Date();
+    document.getElementById("accounting-month").value = String(now.getMonth() + 1);
+    document.getElementById("accounting-year").value = String(now.getFullYear());
+}
+
 function escapeAccountingHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, character => ({
         "&": "&amp;",
@@ -782,7 +800,7 @@ async function accountingRequest(path, options = {}) {
 
 async function loadMonthlyAnalytics() {
     try {
-        const data = await accountingRequest("/analytics/monthly");
+        const data = await accountingRequest(`/analytics/monthly?${accountingPeriodQuery()}`);
         document.getElementById("analytics-monthly-revenue").textContent = formatAccountingMoney(data.monthly_revenue);
         document.getElementById("analytics-gross-profit").textContent = formatAccountingMoney(data.monthly_gross_profit);
         document.getElementById("analytics-monthly-expenses").textContent = formatAccountingMoney(data.monthly_expenses);
@@ -797,7 +815,7 @@ async function loadMonthlyAnalytics() {
 async function loadSalesHistory() {
     const tbody = document.getElementById("sales-history-body");
     try {
-        accountingOrders = await accountingRequest("/orders/");
+        accountingOrders = await accountingRequest(`/orders/?${accountingPeriodQuery()}`);
         if (!accountingOrders.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">No sales recorded.</td></tr>';
             return;
@@ -828,7 +846,7 @@ async function loadSalesHistory() {
 async function loadExpenseHistory() {
     const tbody = document.getElementById("expenses-history-body");
     try {
-        const expenses = await accountingRequest("/expenses/");
+        const expenses = await accountingRequest(`/expenses/?${accountingPeriodQuery()}`);
         if (!expenses.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">No expenses recorded.</td></tr>';
             return;
@@ -1212,18 +1230,18 @@ async function downloadCurrentMonthReport() {
     const status = document.getElementById("report-download-status");
     if (!button) return;
 
+    const { month, year } = getAccountingPeriod();
     button.disabled = true;
     if (status) status.textContent = "Preparing CSV report...";
     try {
-        const response = await fetch(`${ACCOUNTING_API}/reports/monthly/download`);
+        const response = await fetch(`${ACCOUNTING_API}/reports/monthly/download?${accountingPeriodQuery()}`);
         if (!response.ok) throw new Error(`Report download failed (${response.status})`);
 
         const reportBlob = await response.blob();
         const downloadUrl = URL.createObjectURL(reportBlob);
         const link = document.createElement("a");
-        const now = new Date();
         link.href = downloadUrl;
-        link.download = `sihha-monthly-report-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}.csv`;
+        link.download = `sihha-monthly-report-${year}-${String(month).padStart(2, "0")}.csv`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -1240,9 +1258,12 @@ async function downloadCurrentMonthReport() {
 
 document.getElementById("refresh-accounting-btn")?.addEventListener("click", refreshAccounting);
 document.getElementById("download-monthly-report-btn")?.addEventListener("click", downloadCurrentMonthReport);
+document.getElementById("accounting-month")?.addEventListener("change", refreshAccounting);
+document.getElementById("accounting-year")?.addEventListener("change", refreshAccounting);
 
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
+    initializeAccountingPeriod();
     refreshAccounting();
     loadOfflineSaleProducts();
     updateOfflineSaleMode();

@@ -2,10 +2,11 @@ from datetime import datetime
 from typing import List, Literal, Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.database import db
+from app.date_utils import month_window
 
 router = APIRouter()
 
@@ -130,10 +131,16 @@ def create_order(order: OrderCreate):
 
 
 @router.get("/")
-def get_orders():
+def get_orders(
+    month: Optional[int] = Query(None, ge=1, le=12),
+    year: Optional[int] = Query(None, ge=2000, le=2100),
+):
+    start, end = month_window(month, year)
     return [
         _serialize_order(order)
-        for order in db.orders.find().sort("created_at", -1)
+        for order in db.orders.find(
+            {"created_at": {"$gte": start, "$lt": end}}
+        ).sort("created_at", -1)
     ]
 
 

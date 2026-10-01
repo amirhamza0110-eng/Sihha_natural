@@ -13,21 +13,10 @@ from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from app.database import db
+from app.date_utils import month_window
 
 router = APIRouter()
 REPORT_RECIPIENT = "amir.hamza0110@gmail.com"
-
-
-def _month_window(month: Optional[int], year: Optional[int]):
-    now = datetime.now()
-    selected_month = month or now.month
-    selected_year = year or now.year
-    start = datetime(selected_year, selected_month, 1)
-    if selected_month == 12:
-        end = datetime(selected_year + 1, 1, 1)
-    else:
-        end = datetime(selected_year, selected_month + 1, 1)
-    return start, end
 
 
 def _previous_month_window():
@@ -115,85 +104,41 @@ def _iter_monthly_csv(
     orders,
     expenses,
     summary,
-    generated_at: datetime,
 ) -> Iterator[str]:
-    yield _csv_line(["Company: Sihha Naturals"])
-    yield _csv_line(["Report: Monthly Accounting & Sales"])
-    yield _csv_line(["Period:", start.strftime("%B %Y")])
-    yield _csv_line(["Date:", generated_at.strftime("%Y-%m-%d %H:%M:%S")])
+    yield _csv_line(["Sihha Naturals"])
+    yield _csv_line(["Monthly Accounting Report"])
+    yield _csv_line([f"Period: {start.strftime('%B %Y')}"])
     yield _csv_line([])
     yield _csv_line(["FINANCIAL SUMMARY"])
-    yield _csv_line(["Metric", "Amount (BDT)"])
+    yield _csv_line(["Metric", "Amount"])
     yield _csv_line(["Revenue", f'{summary["revenue"]:.2f}'])
     yield _csv_line(["Gross Profit", f'{summary["gross_profit"]:.2f}'])
     yield _csv_line(["Expenses", f'{summary["expenses"]:.2f}'])
     yield _csv_line(["Net Profit", f'{summary["net_profit"]:.2f}'])
     yield _csv_line([])
     yield _csv_line(["SALES DETAILS"])
-    yield _csv_line(
-        [
-            "Date",
-            "Order ID",
-            "Customer",
-            "Order Type",
-            "Product",
-            "Quantity",
-            "Selling Price",
-            "Cost Price",
-            "Line Revenue",
-            "Line Gross Profit",
-            "Order Total",
-            "Order Gross Profit",
-        ]
-    )
+    yield _csv_line(["Date", "Items", "Qty", "Revenue", "Profit"])
 
     for order in orders:
         items = order.get("items", [])
-        order_id = str(order.get("_id", ""))
-        order_profit = _order_profit(order)
-        if not items:
-            yield _csv_line(
-                [
-                    _date_cell(order.get("created_at")),
-                    order_id,
-                    order.get("customer_name", ""),
-                    order.get("order_type", "online"),
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    order.get("total", 0),
-                    order_profit,
-                ]
-            )
-            continue
-
-        for index, item in enumerate(items):
-            quantity = int(item.get("quantity", 0))
-            price = float(item.get("price", 0))
-            cost = _item_cost(item)
-            yield _csv_line(
-                [
-                    _date_cell(order.get("created_at")),
-                    order_id,
-                    order.get("customer_name", ""),
-                    order.get("order_type", "online"),
-                    item.get("name", ""),
-                    quantity,
-                    f"{price:.2f}",
-                    f"{cost:.2f}",
-                    f"{price * quantity:.2f}",
-                    f"{(price - cost) * quantity:.2f}",
-                    order.get("total", 0) if index == 0 else "",
-                    order_profit if index == 0 else "",
-                ]
-            )
+        item_names = "; ".join(
+            f'{item.get("name", "")} x {int(item.get("quantity", 0))}'
+            for item in items
+        )
+        quantity = sum(int(item.get("quantity", 0)) for item in items)
+        yield _csv_line(
+            [
+                _date_cell(order.get("created_at")),
+                item_names,
+                quantity,
+                f'{float(order.get("total", 0)):.2f}',
+                f"{_order_profit(order):.2f}",
+            ]
+        )
 
     yield _csv_line([])
     yield _csv_line(["EXPENSE DETAILS"])
-    yield _csv_line(["Date", "Title", "Category", "Shop", "Amount (BDT)"])
+    yield _csv_line(["Date", "Title", "Category", "Shop", "Amount"])
     for expense in expenses:
         yield _csv_line(
             [
@@ -211,12 +156,11 @@ def download_monthly_report(
     month: Optional[int] = Query(None, ge=1, le=12),
     year: Optional[int] = Query(None, ge=2000, le=2100),
 ):
-    start, end = _month_window(month, year)
+    start, end = month_window(month, year)
     orders, expenses, summary = _load_report_data(start, end)
-    generated_at = datetime.now()
     filename = f"sihha-monthly-report-{start:%Y-%m}.csv"
     return StreamingResponse(
-        _iter_monthly_csv(start, orders, expenses, summary, generated_at),
+        _iter_monthly_csv(start, orders, expenses, summary),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
