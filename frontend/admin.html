@@ -64,37 +64,6 @@
 
     <!-- Main Content -->
     <main class="w-full min-w-0 flex-1 overflow-visible md:overflow-y-auto bg-gray-50 p-4 md:p-8">
-        <section aria-label="Monthly business summary" class="mb-8">
-            <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-xl font-bold text-gray-800">This Month</h2>
-                <button type="button" onclick="loadMonthlyAnalytics()" class="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
-                </button>
-            </div>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <article class="rounded-lg border border-emerald-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-semibold text-gray-500">Total Orders</p>
-                    <p id="analytics-total-orders" class="mt-2 text-2xl font-bold text-gray-900">--</p>
-                    <p class="mt-1 text-xs text-gray-500">Online: <span id="analytics-online-orders">--</span> <span class="mx-1">|</span> Offline: <span id="analytics-offline-orders">--</span></p>
-                </article>
-                <article class="rounded-lg border border-sky-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-semibold text-gray-500">Total Revenue</p>
-                    <p id="analytics-revenue" class="mt-2 text-2xl font-bold text-sky-700">--</p>
-                    <p class="mt-1 text-xs text-gray-500">This month</p>
-                </article>
-                <article class="rounded-lg border border-amber-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-semibold text-gray-500">Total Expenses</p>
-                    <p id="analytics-expenses" class="mt-2 text-2xl font-bold text-amber-700">--</p>
-                    <p class="mt-1 text-xs text-gray-500">This month</p>
-                </article>
-                <article class="rounded-lg border border-rose-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-semibold text-gray-500">Net Profit</p>
-                    <p id="analytics-net-profit" class="mt-2 text-2xl font-bold text-rose-700">--</p>
-                    <p class="mt-1 text-xs text-gray-500">After expenses</p>
-                </article>
-            </div>
-        </section>
-        
         <!-- ================= ORDERS SECTION ================= -->
         <section id="section-orders" class="hidden">
             <div class="flex justify-between items-center mb-6">
@@ -193,48 +162,176 @@
         </section>
 
         <section id="section-accounting" class="hidden">
-            <h2 class="mb-6 text-2xl font-bold text-gray-800">Accounting Entries</h2>
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <form id="expense-form" class="space-y-4 rounded-lg border bg-white p-6 shadow-sm">
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Accounting</h2>
+                    <p class="mt-1 text-sm text-gray-500">Monthly performance and all-time inventory valuation</p>
+                </div>
+                <button type="button" onclick="refreshAccounting()" class="shrink-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50" title="Refresh accounting data">
+                    <i class="fa-solid fa-rotate-right"></i><span class="ml-2">Refresh</span>
+                </button>
+            </div>
+
+            <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <button type="button" onclick="scrollToAccountingHistory('sales-history')" class="rounded-lg border border-sky-200 bg-white p-5 text-left shadow-sm transition hover:border-sky-500 hover:shadow-md">
+                    <span class="text-sm font-semibold text-gray-500">Monthly Revenue</span>
+                    <span id="analytics-monthly-revenue" class="mt-2 block text-2xl font-bold text-sky-700">--</span>
+                </button>
+                <button type="button" onclick="scrollToAccountingHistory('sales-history')" class="rounded-lg border border-emerald-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md">
+                    <span class="text-sm font-semibold text-gray-500">Monthly Gross Profit</span>
+                    <span id="analytics-gross-profit" class="mt-2 block text-2xl font-bold text-emerald-700">--</span>
+                </button>
+                <button type="button" onclick="scrollToAccountingHistory('expenses-history')" class="rounded-lg border border-amber-200 bg-white p-5 text-left shadow-sm transition hover:border-amber-500 hover:shadow-md">
+                    <span class="text-sm font-semibold text-gray-500">Monthly Expenses</span>
+                    <span id="analytics-monthly-expenses" class="mt-2 block text-2xl font-bold text-amber-700">--</span>
+                </button>
+                <button type="button" onclick="scrollToAccountingHistory('sales-history')" class="rounded-lg border border-rose-200 bg-white p-5 text-left shadow-sm transition hover:border-rose-500 hover:shadow-md">
+                    <span class="text-sm font-semibold text-gray-500">Monthly Net Profit</span>
+                    <span id="analytics-net-profit" class="mt-2 block text-2xl font-bold text-rose-700">--</span>
+                </button>
+                <button type="button" onclick="scrollToAccountingHistory('inventory-history')" class="rounded-lg border border-violet-200 bg-white p-5 text-left shadow-sm transition hover:border-violet-500 hover:shadow-md">
+                    <span class="text-sm font-semibold text-gray-500">Total Stock Investment</span>
+                    <span id="analytics-stock-investment" class="mt-2 block text-2xl font-bold text-violet-700">--</span>
+                </button>
+                <button type="button" onclick="scrollToAccountingHistory('inventory-history')" class="rounded-lg border border-teal-200 bg-white p-5 text-left shadow-sm transition hover:border-teal-500 hover:shadow-md">
+                    <span class="text-sm font-semibold text-gray-500">Remaining Stock Value</span>
+                    <span id="analytics-remaining-stock" class="mt-2 block text-2xl font-bold text-teal-700">--</span>
+                </button>
+            </div>
+
+            <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
+                <form id="expense-form" class="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
                     <h3 class="border-b pb-3 text-lg font-bold text-gray-800">Add Expense</h3>
                     <div>
                         <label for="expense-title" class="mb-1 block text-sm font-semibold text-gray-700">Title</label>
-                        <input id="expense-title" type="text" required class="w-full rounded border p-2" placeholder="Packaging">
+                        <input id="expense-title" name="title" type="text" required class="w-full rounded border p-2">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="expense-amount" class="mb-1 block text-sm font-semibold text-gray-700">Amount (৳)</label>
+                            <input id="expense-amount" name="amount" type="number" min="0.01" step="0.01" required class="w-full rounded border p-2">
+                        </div>
+                        <div>
+                            <label for="expense-category" class="mb-1 block text-sm font-semibold text-gray-700">Category</label>
+                            <input id="expense-category" name="category" type="text" required class="w-full rounded border p-2">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                        <div>
+                            <label for="expense-shop" class="mb-1 block text-sm font-semibold text-gray-700">Shop name <span class="font-normal text-gray-400">(optional)</span></label>
+                            <input id="expense-shop" name="shop_name" type="text" class="w-full rounded border p-2">
+                        </div>
+                        <div>
+                            <label for="expense-date" class="mb-1 block text-sm font-semibold text-gray-700">Date</label>
+                            <input id="expense-date" name="date" type="datetime-local" required class="w-full rounded border p-2">
+                        </div>
                     </div>
                     <div>
-                        <label for="expense-amount" class="mb-1 block text-sm font-semibold text-gray-700">Amount (৳)</label>
-                        <input id="expense-amount" type="number" min="0.01" step="0.01" required class="w-full rounded border p-2">
-                    </div>
-                    <div>
-                        <label for="expense-category" class="mb-1 block text-sm font-semibold text-gray-700">Category</label>
-                        <input id="expense-category" type="text" required class="w-full rounded border p-2" placeholder="Packaging, marketing">
-                    </div>
-                    <div>
-                        <label for="expense-date" class="mb-1 block text-sm font-semibold text-gray-700">Date and time</label>
-                        <input id="expense-date" type="datetime-local" required class="w-full rounded border p-2">
+                        <label for="expense-bill" class="mb-1 block text-sm font-semibold text-gray-700">Bill image <span class="font-normal text-gray-400">(optional)</span></label>
+                        <input id="expense-bill" name="bill_image" type="file" accept="image/*" class="w-full rounded border bg-white p-2 text-sm">
                     </div>
                     <button type="submit" class="rounded bg-natureGreen px-5 py-2 font-semibold text-white hover:bg-green-800">Save Expense</button>
                 </form>
 
-                <form id="offline-sale-form" class="space-y-4 rounded-lg border bg-white p-6 shadow-sm">
-                    <h3 class="border-b pb-3 text-lg font-bold text-gray-800">Add Offline Sale</h3>
+                <form id="inventory-purchase-form" class="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
+                    <h3 class="border-b pb-3 text-lg font-bold text-gray-800">Record Inventory Purchase</h3>
                     <div>
-                        <label for="offline-sale-product" class="mb-1 block text-sm font-semibold text-gray-700">Product</label>
-                        <select id="offline-sale-product" required class="w-full rounded border p-2">
-                            <option value="">Loading products...</option>
-                        </select>
+                        <label for="purchase-item-name" class="mb-1 block text-sm font-semibold text-gray-700">Item name</label>
+                        <input id="purchase-item-name" name="item_name" type="text" required class="w-full rounded border p-2">
                     </div>
                     <div>
-                        <label for="offline-sale-price" class="mb-1 block text-sm font-semibold text-gray-700">Selling price per item (৳)</label>
-                        <input id="offline-sale-price" type="number" min="0.01" step="0.01" required class="w-full rounded border p-2">
+                        <label for="purchase-amount" class="mb-1 block text-sm font-semibold text-gray-700">Amount (৳)</label>
+                        <input id="purchase-amount" name="amount" type="number" min="0.01" step="0.01" required class="w-full rounded border p-2">
+                    </div>
+                    <div>
+                        <label for="purchase-supplier" class="mb-1 block text-sm font-semibold text-gray-700">Supplier <span class="font-normal text-gray-400">(optional)</span></label>
+                        <input id="purchase-supplier" name="supplier_name" type="text" class="w-full rounded border p-2">
+                    </div>
+                    <div>
+                        <label for="purchase-date" class="mb-1 block text-sm font-semibold text-gray-700">Date</label>
+                        <input id="purchase-date" name="date" type="datetime-local" required class="w-full rounded border p-2">
+                    </div>
+                    <div>
+                        <label for="purchase-bill" class="mb-1 block text-sm font-semibold text-gray-700">Bill image <span class="font-normal text-gray-400">(optional)</span></label>
+                        <input id="purchase-bill" name="bill_image" type="file" accept="image/*" class="w-full rounded border bg-white p-2 text-sm">
+                    </div>
+                    <button type="submit" class="rounded bg-choco px-5 py-2 font-semibold text-white hover:bg-gray-800">Save Purchase</button>
+                </form>
+
+                <form id="offline-sale-form" class="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
+                    <h3 class="border-b pb-3 text-lg font-bold text-gray-800">Record Offline Sale</h3>
+                    <fieldset>
+                        <legend class="mb-2 text-sm font-semibold text-gray-700">Sale item</legend>
+                        <div class="flex flex-wrap gap-4 text-sm">
+                            <label class="flex items-center gap-2"><input type="radio" name="offline-item-mode" value="existing" checked> Existing product</label>
+                            <label class="flex items-center gap-2"><input type="radio" name="offline-item-mode" value="custom"> Custom product</label>
+                        </div>
+                    </fieldset>
+                    <div id="offline-existing-fields" class="space-y-3">
+                        <div>
+                            <label for="offline-sale-product" class="mb-1 block text-sm font-semibold text-gray-700">Product</label>
+                            <select id="offline-sale-product" class="w-full rounded border p-2">
+                                <option value="">Loading products...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="offline-sale-price" class="mb-1 block text-sm font-semibold text-gray-700">Selling price per item (৳)</label>
+                            <input id="offline-sale-price" type="number" min="0.01" step="0.01" class="w-full rounded border p-2">
+                        </div>
+                    </div>
+                    <div id="offline-custom-fields" class="hidden space-y-3">
+                        <div>
+                            <label for="offline-custom-name" class="mb-1 block text-sm font-semibold text-gray-700">Custom product name</label>
+                            <input id="offline-custom-name" type="text" class="w-full rounded border p-2">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="offline-custom-selling-price" class="mb-1 block text-sm font-semibold text-gray-700">Selling price (৳)</label>
+                                <input id="offline-custom-selling-price" type="number" min="0.01" step="0.01" class="w-full rounded border p-2">
+                            </div>
+                            <div>
+                                <label for="offline-custom-cost-price" class="mb-1 block text-sm font-semibold text-gray-700">Cost price (৳)</label>
+                                <input id="offline-custom-cost-price" type="number" min="0" step="0.01" class="w-full rounded border p-2">
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label for="offline-sale-quantity" class="mb-1 block text-sm font-semibold text-gray-700">Quantity</label>
                         <input id="offline-sale-quantity" type="number" min="1" step="1" value="1" required class="w-full rounded border p-2">
                     </div>
-                    <button type="submit" class="rounded bg-choco px-5 py-2 font-semibold text-white hover:bg-natureGreen">Save Offline Sale</button>
+                    <button type="submit" class="rounded bg-emerald-700 px-5 py-2 font-semibold text-white hover:bg-emerald-800">Save Offline Sale</button>
                 </form>
             </div>
+
+            <section id="sales-history" class="mb-8 scroll-mt-6">
+                <h3 class="mb-3 text-lg font-bold text-gray-800">Sales History</h3>
+                <div class="overflow-x-auto rounded-lg border bg-white shadow-sm">
+                    <table class="min-w-[900px] w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-700"><tr><th class="p-3">Date</th><th class="p-3">Customer</th><th class="p-3">Type</th><th class="p-3">Items</th><th class="p-3">Revenue</th><th class="p-3">Gross profit</th><th class="p-3 text-right">Actions</th></tr></thead>
+                        <tbody id="sales-history-body" class="divide-y divide-gray-100"><tr><td colspan="7" class="p-4 text-center text-gray-500">Loading sales...</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="expenses-history" class="mb-8 scroll-mt-6">
+                <h3 class="mb-3 text-lg font-bold text-gray-800">Expenses History</h3>
+                <div class="overflow-x-auto rounded-lg border bg-white shadow-sm">
+                    <table class="min-w-[850px] w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-700"><tr><th class="p-3">Date</th><th class="p-3">Title</th><th class="p-3">Category</th><th class="p-3">Shop</th><th class="p-3">Amount</th><th class="p-3">Bill</th><th class="p-3 text-right">Actions</th></tr></thead>
+                        <tbody id="expenses-history-body" class="divide-y divide-gray-100"><tr><td colspan="7" class="p-4 text-center text-gray-500">Loading expenses...</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="inventory-history" class="mb-8 scroll-mt-6">
+                <h3 class="mb-3 text-lg font-bold text-gray-800">Inventory Purchases History</h3>
+                <div class="overflow-x-auto rounded-lg border bg-white shadow-sm">
+                    <table class="min-w-[800px] w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-700"><tr><th class="p-3">Date</th><th class="p-3">Item</th><th class="p-3">Supplier</th><th class="p-3">Amount</th><th class="p-3">Bill</th><th class="p-3 text-right">Actions</th></tr></thead>
+                        <tbody id="inventory-history-body" class="divide-y divide-gray-100"><tr><td colspan="6" class="p-4 text-center text-gray-500">Loading purchases...</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
         </section>
 
         <!-- ================= CATEGORY SECTION ================= -->
@@ -349,6 +446,54 @@
         </section>
         
     </main> 
+
+    <div id="ledger-edit-modal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-black/60 p-4">
+        <form id="ledger-edit-form" class="max-h-[90vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div class="flex items-center justify-between border-b pb-3">
+                <h2 id="ledger-edit-heading" class="text-xl font-bold text-gray-800">Edit record</h2>
+                <button type="button" onclick="closeLedgerEdit()" class="px-2 text-gray-500 hover:text-gray-900" aria-label="Close editor"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input id="ledger-edit-id" type="hidden">
+            <input id="ledger-edit-type" type="hidden">
+            <div id="ledger-edit-fields" class="space-y-3"></div>
+            <div>
+                <label for="ledger-edit-bill" class="mb-1 block text-sm font-semibold text-gray-700">Replace bill image <span class="font-normal text-gray-400">(optional)</span></label>
+                <input id="ledger-edit-bill" name="bill_image" type="file" accept="image/*" class="w-full rounded border bg-white p-2 text-sm">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeLedgerEdit()" class="rounded border px-4 py-2 text-gray-700">Cancel</button>
+                <button type="submit" class="rounded bg-natureGreen px-4 py-2 font-semibold text-white hover:bg-green-800">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="edit-sale-modal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-black/60 p-4">
+        <form id="edit-sale-form" class="max-h-[90vh] w-full max-w-2xl space-y-4 overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div class="flex items-center justify-between border-b pb-3">
+                <h2 class="text-xl font-bold text-gray-800">Edit Sale</h2>
+                <button type="button" onclick="closeSaleEdit()" class="px-2 text-gray-500 hover:text-gray-900" aria-label="Close sale editor"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input id="edit-sale-id" type="hidden">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input id="edit-sale-customer" type="text" required class="rounded border p-2" placeholder="Customer name">
+                <input id="edit-sale-phone" type="text" required class="rounded border p-2" placeholder="Customer phone">
+                <input id="edit-sale-area" type="text" required class="rounded border p-2" placeholder="Delivery area">
+                <input id="edit-sale-address" type="text" required class="rounded border p-2" placeholder="Address">
+                <select id="edit-sale-type" class="rounded border p-2"><option value="online">Online</option><option value="offline">Offline</option></select>
+                <input id="edit-sale-subtotal" type="number" min="0" step="0.01" required class="rounded border p-2" placeholder="Subtotal">
+                <input id="edit-sale-delivery" type="number" min="0" step="0.01" required class="rounded border p-2" placeholder="Delivery charge">
+                <input id="edit-sale-total" type="number" min="0" step="0.01" required class="rounded border p-2" placeholder="Total">
+            </div>
+            <div>
+                <label for="edit-sale-items" class="mb-1 block text-sm font-semibold text-gray-700">Items JSON (include name, price, quantity and cost_price)</label>
+                <textarea id="edit-sale-items" rows="7" required class="w-full rounded border p-2 font-mono text-xs"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeSaleEdit()" class="rounded border px-4 py-2 text-gray-700">Cancel</button>
+                <button type="submit" class="rounded bg-natureGreen px-4 py-2 font-semibold text-white hover:bg-green-800">Save Sale</button>
+            </div>
+        </form>
+    </div>
 
     <!-- ================= EDIT MODALS ================= -->
     <!-- Edit Product Modal -->

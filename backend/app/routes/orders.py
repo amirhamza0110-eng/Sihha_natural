@@ -1,18 +1,25 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from app.database import db
-from bson import ObjectId
-from typing import List, Literal, Optional
 from datetime import datetime
+from typing import List, Literal, Optional
+
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from app.database import db
 
 router = APIRouter()
 
-# Pydantic Models for Validation
+
 class OrderItem(BaseModel):
-    name: str
-    price: float
-    quantity: int
+    name: Optional[str] = None
+    price: Optional[float] = Field(default=None, ge=0)
+    quantity: int = Field(gt=0)
     product_id: Optional[str] = None
+    cost_price: Optional[float] = Field(default=None, ge=0)
+    custom_product_name: Optional[str] = None
+    custom_selling_price: Optional[float] = Field(default=None, ge=0)
+    custom_cost_price: Optional[float] = Field(default=None, ge=0)
+
 
 class OrderCreate(BaseModel):
     customer_name: str
@@ -25,71 +32,147 @@ class OrderCreate(BaseModel):
     total: float
     order_type: Literal["online", "offline"] = "online"
 
-# ১. নতুন অর্ডার তৈরি করার API
+
+def _normalize_order_items(items: List[OrderItem], order_type: str):
+    normalized_items = []
+    total_profit = 0.0
+
+    for item in items:
+        custom_fields_present = any(
+            value is not None
+            for value in (
+                item.custom_product_name,
+                item.custom_selling_price,
+                item.custom_cost_price,
+            )
+        )
+
+        if custom_fields_present:
+            if order_type != "offline" or item.product_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Custom product details are only allowed for offline orders without a product ID",
+                )
+            item_name = item.custom_product_name or item.name
+            item_price = item.custom_selling_price
+            item_cost = item.custom_cost_price
+            if not item_name or item_price is None or item_cost is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Custom offline items require a name, selling price, and cost price",
+                )
+        else:
+            if item.product_id:
+                if not ObjectId.is_valid(item.product_id):
+                    raise HTTPException(status_code=400, detail="Invalid product ID")
+                product = db.products.find_one({"_id": ObjectId(item.product_id)})
+            else:
+                product = db.products.find_one({"name": item.name}) if item.name else None
+
+            if product:
+                item_name = item.name or product["name"]
+                item_price = item.price if item.price is not None else product["price"]
+                item_cost = product.get("cost_price", 0)
+            elif (
+                order_type == "offline"
+                and item.name
+                and item.price is not None
+                and item.cost_price is not None
+            ):
+                item_name = item.name
+                item_price = item.price
+                item_cost = item.cost_price
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Product cost could not be found for '{item.name or 'item'}'",
+                )
+
+        normalized_items.append(
+            {
+                "name": item_name,
+                "price": float(item_price),
+                "cost_price": float(item_cost),
+                "quantity": item.quantity,
+                **({"product_id": item.product_id} if item.product_id else {}),
+            }
+        )
+        total_profit += (float(item_price) - float(item_cost)) * item.quantity
+
+    return normalized_items, total_profit
+
+
+def _get_order(order_id: str):
+    if not ObjectId.is_valid(order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID")
+    order = db.orders.find_one({"_id": ObjectId(order_id)})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order
+
+
+def _serialize_order(order):
+    order["id"] = str(order.pop("_id"))
+    return order
+
+
 @router.post("/")
 def create_order(order: OrderCreate):
     order_dict = order.dict()
-    total_profit = 0.0
-    for item in order.items:
-        if item.product_id and not ObjectId.is_valid(item.product_id):
-            raise HTTPException(status_code=400, detail="Invalid product ID")
-
-        product_query = (
-            {"_id": ObjectId(item.product_id)}
-            if item.product_id
-            else {"name": item.name}
-        )
-        product = db.products.find_one(product_query)
-        if not product:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Product cost could not be found for '{item.name}'",
-            )
-
-        total_profit += (item.price - product.get("cost_price", 0)) * item.quantity
-
+    order_items, total_profit = _normalize_order_items(order.items, order.order_type)
+    order_dict["items"] = order_items
     order_dict["total_profit"] = total_profit
-    order_dict["status"] = "Pending"  # শুরুতে অর্ডারের স্ট্যাটাস Pending থাকবে
+    order_dict["status"] = "Pending"
     order_dict["created_at"] = datetime.now()
-    
+
     inserted = db.orders.insert_one(order_dict)
     return {"message": "Order saved successfully!", "order_id": str(inserted.inserted_id)}
 
-# ২. অ্যাডমিন প্যানেলের জন্য সব অর্ডার দেখার API
+
 @router.get("/")
 def get_orders():
-    orders = []
-    # নতুন অর্ডারগুলো আগে দেখানোর জন্য sort("created_at", -1) করা হয়েছে
-    for order in db.orders.find().sort("created_at", -1):
-        order["id"] = str(order["_id"])
-        del order["_id"]
-        orders.append(order)
-    return orders
+    return [
+        _serialize_order(order)
+        for order in db.orders.find().sort("created_at", -1)
+    ]
 
-# ৩. অর্ডারের স্ট্যাটাস (Pending -> Delivered) আপডেট করার API
+
+@router.get("/{order_id}")
+def get_order(order_id: str):
+    return _serialize_order(_get_order(order_id))
+
+
+@router.put("/{order_id}")
+def update_order(order_id: str, order: OrderCreate):
+    existing = _get_order(order_id)
+    order_dict = order.dict()
+    order_items, total_profit = _normalize_order_items(order.items, order.order_type)
+    order_dict["items"] = order_items
+    order_dict["total_profit"] = total_profit
+    order_dict["updated_at"] = datetime.now()
+    order_dict["status"] = existing.get("status", "Pending")
+    order_dict["created_at"] = existing.get("created_at", datetime.now())
+
+    db.orders.update_one({"_id": existing["_id"]}, {"$set": order_dict})
+    updated = db.orders.find_one({"_id": existing["_id"]})
+    return _serialize_order(updated)
+
+
 @router.put("/{order_id}/status")
 def update_order_status(order_id: str, status: str):
-    try:
-        result = db.orders.update_one(
-            {"_id": ObjectId(order_id)},
-            {"$set": {"status": status}}
-        )
-        if result.modified_count == 0:
-            raise HTTPException(status_code=404, detail="Order not found or status already set")
-        return {"message": "Status updated successfully!"}
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid Order ID")
+    if not ObjectId.is_valid(order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID")
+    result = db.orders.update_one(
+        {"_id": ObjectId(order_id)},
+        {"$set": {"status": status}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"message": "Status updated successfully!"}
 
-from bson import ObjectId
-from fastapi import HTTPException
 
 @router.delete("/{order_id}")
 def delete_order(order_id: str):
-    try:
-        # এখানে db["orders"] বা আপনার যেটা নাম দেওয়া আছে সেটা ব্যবহার করবেন
-        result = db["orders"].delete_one({"_id": ObjectId(order_id)})
-        if result.deleted_count == 1:
-            return {"message": "Order deleted successfully"}
-        raise HTTPException(status_code=404, detail="Order not found")
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid Order ID")   
+    existing = _get_order(order_id)
+    db.orders.delete_one({"_id": existing["_id"]})
+    return {"message": "Order deleted successfully"}

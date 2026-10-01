@@ -16,7 +16,7 @@ def get_monthly_analytics():
     else:
         next_month_start = month_start.replace(month=month_start.month + 1)
 
-    order_summary = next(
+    monthly_order_summary = next(
         db.orders.aggregate(
             [
                 {
@@ -28,34 +28,59 @@ def get_monthly_analytics():
                     }
                 },
                 {
+                    "$unwind": {
+                        "path": "$items",
+                        "preserveNullAndEmptyArrays": True,
+                    }
+                },
+                {
+                    "$lookup": {
+                        "from": "products",
+                        "localField": "items.name",
+                        "foreignField": "name",
+                        "as": "_legacy_products",
+                    }
+                },
+                {
+                    "$addFields": {
+                        "_resolved_item_cost": {
+                            "$ifNull": [
+                                "$items.cost_price",
+                                {"$arrayElemAt": ["$_legacy_products.cost_price", 0]},
+                            ]
+                        }
+                    }
+                },
+                {
                     "$group": {
-                        "_id": None,
-                        "online_orders": {
+                        "_id": "$_id",
+                        "order_revenue": {"$first": {"$ifNull": ["$total", 0]}},
+                        "stored_profit": {
+                            "$first": {"$ifNull": ["$total_profit", None]}
+                        },
+                        "calculated_profit": {
                             "$sum": {
-                                "$cond": [
+                                "$multiply": [
                                     {
-                                        "$eq": [
-                                            {"$ifNull": ["$order_type", "online"]},
-                                            "online",
+                                        "$subtract": [
+                                            {"$ifNull": ["$items.price", 0]},
+                                            {"$ifNull": ["$_resolved_item_cost", 0]},
                                         ]
                                     },
-                                    1,
-                                    0,
+                                    {"$ifNull": ["$items.quantity", 0]},
                                 ]
                             }
                         },
-                        "offline_orders": {
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": None,
+                        "monthly_revenue": {"$sum": "$order_revenue"},
+                        "monthly_gross_profit": {
                             "$sum": {
-                                "$cond": [
-                                    {"$eq": ["$order_type", "offline"]},
-                                    1,
-                                    0,
-                                ]
+                                "$ifNull": ["$stored_profit", "$calculated_profit"]
                             }
-                        },
-                        "total_revenue": {"$sum": {"$ifNull": ["$total", 0]}},
-                        "total_profit": {
-                            "$sum": {"$ifNull": ["$total_profit", 0]}
                         },
                     }
                 },
@@ -64,7 +89,7 @@ def get_monthly_analytics():
         {},
     )
 
-    expense_summary = next(
+    monthly_expense_summary = next(
         db.expenses.aggregate(
             [
                 {
@@ -72,20 +97,111 @@ def get_monthly_analytics():
                         "date": {"$gte": month_start, "$lt": next_month_start}
                     }
                 },
-                {"$group": {"_id": None, "total_expenses": {"$sum": "$amount"}}},
+                {"$group": {"_id": None, "monthly_expenses": {"$sum": "$amount"}}},
             ]
         ),
         {},
     )
 
-    total_expenses = float(expense_summary.get("total_expenses", 0))
-    total_profit = float(order_summary.get("total_profit", 0))
+    investment_summary = next(
+        db.inventory_purchases.aggregate(
+            [
+                {
+                    "$group": {
+                        "_id": None,
+                        "total_stock_investment": {"$sum": "$amount"},
+                    }
+                }
+            ]
+        ),
+        {},
+    )
+
+    cogs_summary = next(
+        db.orders.aggregate(
+            [
+                {
+                    "$unwind": {
+                        "path": "$items",
+                        "preserveNullAndEmptyArrays": True,
+                    }
+                },
+                {
+                    "$lookup": {
+                        "from": "products",
+                        "localField": "items.name",
+                        "foreignField": "name",
+                        "as": "_legacy_products",
+                    }
+                },
+                {
+                    "$addFields": {
+                        "_resolved_item_cost": {
+                            "$ifNull": [
+                                "$items.cost_price",
+                                {"$arrayElemAt": ["$_legacy_products.cost_price", 0]},
+                            ]
+                        }
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$_id",
+                        "line_revenue": {
+                            "$sum": {
+                                "$multiply": [
+                                    {"$ifNull": ["$items.price", 0]},
+                                    {"$ifNull": ["$items.quantity", 0]},
+                                ]
+                            }
+                        },
+                        "line_cogs": {
+                            "$sum": {
+                                "$multiply": [
+                                    {"$ifNull": ["$_resolved_item_cost", 0]},
+                                    {"$ifNull": ["$items.quantity", 0]},
+                                ]
+                            }
+                        },
+                        "stored_profit": {
+                            "$first": {"$ifNull": ["$total_profit", None]}
+                        },
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": None,
+                        "all_time_cogs": {
+                            "$sum": {
+                                "$cond": [
+                                    {"$ne": ["$stored_profit", None]},
+                                    {"$subtract": ["$line_revenue", "$stored_profit"]},
+                                    "$line_cogs",
+                                ]
+                            }
+                        },
+                    }
+                },
+            ]
+        ),
+        {},
+    )
+
+    monthly_revenue = float(monthly_order_summary.get("monthly_revenue", 0))
+    monthly_gross_profit = float(
+        monthly_order_summary.get("monthly_gross_profit", 0)
+    )
+    monthly_expenses = float(monthly_expense_summary.get("monthly_expenses", 0))
+    total_stock_investment = float(
+        investment_summary.get("total_stock_investment", 0)
+    )
+    all_time_cogs = float(cogs_summary.get("all_time_cogs", 0))
+
     return {
-        "total_orders_count": {
-            "online": int(order_summary.get("online_orders", 0)),
-            "offline": int(order_summary.get("offline_orders", 0)),
-        },
-        "total_revenue": float(order_summary.get("total_revenue", 0)),
-        "total_expenses": total_expenses,
-        "net_profit": total_profit - total_expenses,
+        "monthly_revenue": monthly_revenue,
+        "monthly_gross_profit": monthly_gross_profit,
+        "monthly_expenses": monthly_expenses,
+        "monthly_net_profit": monthly_gross_profit - monthly_expenses,
+        "total_stock_investment": total_stock_investment,
+        "remaining_stock_value": total_stock_investment - all_time_cogs,
     }

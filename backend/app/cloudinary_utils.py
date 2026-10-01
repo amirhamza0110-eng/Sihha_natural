@@ -34,3 +34,21 @@ def upload_product_image(file_bytes, filename: str):
 def delete_product_image(public_id: str):
     """প্রোডাক্ট ডিলিট করলে Cloudinary থেকেও ছবি মুছে ফেলার ফাংশন"""
     return cloudinary.uploader.destroy(public_id)
+
+
+def upload_bill_image(file_bytes, folder: str):
+    """Upload a bill image and return its secure URL and Cloudinary public ID."""
+    response = cloudinary.uploader.upload(
+        file_bytes,
+        folder=f"sihha_naturals/{folder}",
+        resource_type="image",
+    )
+    return {
+        "url": response.get("secure_url"),
+        "public_id": response.get("public_id"),
+    }
+
+
+def delete_bill_image(public_id: str):
+    """Delete a bill asset from Cloudinary."""
+    return cloudinary.uploader.destroy(public_id, resource_type="image")

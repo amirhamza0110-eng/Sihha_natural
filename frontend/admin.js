@@ -691,40 +691,173 @@ async function deleteOffer(id) {
     }
 }
 
-async function loadMonthlyAnalytics() {
-    const formatMoney = value => new Intl.NumberFormat("en-BD", {
+const ACCOUNTING_API = "https://sihha-natural.onrender.com/api";
+let accountingOrders = [];
+
+function escapeAccountingHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function formatAccountingMoney(value) {
+    return new Intl.NumberFormat("en-BD", {
         style: "currency",
         currency: "BDT",
         maximumFractionDigits: 2
     }).format(Number(value) || 0);
+}
 
+function formatAccountingDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString();
+}
+
+function accountingBillLink(url) {
+    if (!url) return "-";
     try {
-        const response = await fetch("https://sihha-natural.onrender.com/api/analytics/monthly");
-        if (!response.ok) throw new Error("Could not load monthly analytics");
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== "https:") return "-";
+        return `<a href="${escapeAccountingHtml(parsedUrl.href)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sky-700 underline">View Bill</a>`;
+    } catch {
+        return "-";
+    }
+}
 
-        const data = await response.json();
-        const online = Number(data.total_orders_count?.online) || 0;
-        const offline = Number(data.total_orders_count?.offline) || 0;
+async function accountingRequest(path, options = {}) {
+    const response = await fetch(`${ACCOUNTING_API}${path}`, options);
+    if (!response.ok) {
+        let message = `Request failed (${response.status})`;
+        try {
+            const detail = await response.json();
+            message = detail.detail || detail.message || message;
+        } catch {
+            // Keep the HTTP status message when the response is not JSON.
+        }
+        throw new Error(message);
+    }
+    if (response.status === 204) return null;
+    return response.json();
+}
 
-        document.getElementById("analytics-total-orders").textContent = online + offline;
-        document.getElementById("analytics-online-orders").textContent = online;
-        document.getElementById("analytics-offline-orders").textContent = offline;
-        document.getElementById("analytics-revenue").textContent = formatMoney(data.total_revenue);
-        document.getElementById("analytics-expenses").textContent = formatMoney(data.total_expenses);
-        document.getElementById("analytics-net-profit").textContent = formatMoney(data.net_profit);
+async function loadMonthlyAnalytics() {
+    try {
+        const data = await accountingRequest("/analytics/monthly");
+        document.getElementById("analytics-monthly-revenue").textContent = formatAccountingMoney(data.monthly_revenue);
+        document.getElementById("analytics-gross-profit").textContent = formatAccountingMoney(data.monthly_gross_profit);
+        document.getElementById("analytics-monthly-expenses").textContent = formatAccountingMoney(data.monthly_expenses);
+        document.getElementById("analytics-net-profit").textContent = formatAccountingMoney(data.monthly_net_profit);
+        document.getElementById("analytics-stock-investment").textContent = formatAccountingMoney(data.total_stock_investment);
+        document.getElementById("analytics-remaining-stock").textContent = formatAccountingMoney(data.remaining_stock_value);
     } catch (error) {
         console.error("Monthly analytics error:", error);
     }
 }
 
+async function loadSalesHistory() {
+    const tbody = document.getElementById("sales-history-body");
+    try {
+        accountingOrders = await accountingRequest("/orders/");
+        if (!accountingOrders.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">No sales recorded.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = accountingOrders.map(order => {
+            const items = (order.items || []).map(item =>
+                `${escapeAccountingHtml(item.name)} × ${Number(item.quantity) || 0}`
+            ).join("<br>");
+            return `<tr>
+                <td class="p-3">${escapeAccountingHtml(formatAccountingDate(order.created_at))}</td>
+                <td class="p-3">${escapeAccountingHtml(order.customer_name || "Walk-in")}</td>
+                <td class="p-3 capitalize">${escapeAccountingHtml(order.order_type || "online")}</td>
+                <td class="p-3">${items || "-"}</td>
+                <td class="p-3 font-semibold">${formatAccountingMoney(order.total)}</td>
+                <td class="p-3 font-semibold text-emerald-700">${formatAccountingMoney(order.total_profit)}</td>
+                <td class="p-3 text-right whitespace-nowrap">
+                    <button type="button" onclick="editSale('${order.id}')" class="mr-2 rounded border px-3 py-1 text-sky-700 hover:bg-sky-50">Edit</button>
+                    <button type="button" onclick="deleteSale('${order.id}')" class="rounded border border-rose-200 px-3 py-1 text-rose-700 hover:bg-rose-50">Delete</button>
+                </td>
+            </tr>`;
+        }).join("");
+    } catch (error) {
+        console.error("Sales history error:", error);
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-rose-600">Could not load sales.</td></tr>';
+    }
+}
+
+async function loadExpenseHistory() {
+    const tbody = document.getElementById("expenses-history-body");
+    try {
+        const expenses = await accountingRequest("/expenses/");
+        if (!expenses.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">No expenses recorded.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = expenses.map(expense => `<tr>
+            <td class="p-3">${escapeAccountingHtml(formatAccountingDate(expense.date))}</td>
+            <td class="p-3 font-medium">${escapeAccountingHtml(expense.title)}</td>
+            <td class="p-3">${escapeAccountingHtml(expense.category)}</td>
+            <td class="p-3">${escapeAccountingHtml(expense.shop_name || "-")}</td>
+            <td class="p-3 font-semibold">${formatAccountingMoney(expense.amount)}</td>
+            <td class="p-3">${accountingBillLink(expense.bill_image_url)}</td>
+            <td class="p-3 text-right whitespace-nowrap">
+                <button type="button" onclick="editExpense('${expense.id}')" class="mr-2 rounded border px-3 py-1 text-sky-700 hover:bg-sky-50">Edit</button>
+                <button type="button" onclick="deleteExpense('${expense.id}')" class="rounded border border-rose-200 px-3 py-1 text-rose-700 hover:bg-rose-50">Delete</button>
+            </td>
+        </tr>`).join("");
+    } catch (error) {
+        console.error("Expenses history error:", error);
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-rose-600">Could not load expenses.</td></tr>';
+    }
+}
+
+async function loadInventoryPurchaseHistory() {
+    const tbody = document.getElementById("inventory-history-body");
+    try {
+        const purchases = await accountingRequest("/inventory-purchases/");
+        if (!purchases.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No inventory purchases recorded.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = purchases.map(purchase => `<tr>
+            <td class="p-3">${escapeAccountingHtml(formatAccountingDate(purchase.date))}</td>
+            <td class="p-3 font-medium">${escapeAccountingHtml(purchase.item_name)}</td>
+            <td class="p-3">${escapeAccountingHtml(purchase.supplier_name || "-")}</td>
+            <td class="p-3 font-semibold">${formatAccountingMoney(purchase.amount)}</td>
+            <td class="p-3">${accountingBillLink(purchase.bill_image_url)}</td>
+            <td class="p-3 text-right whitespace-nowrap">
+                <button type="button" onclick="editInventoryPurchase('${purchase.id}')" class="mr-2 rounded border px-3 py-1 text-sky-700 hover:bg-sky-50">Edit</button>
+                <button type="button" onclick="deleteInventoryPurchase('${purchase.id}')" class="rounded border border-rose-200 px-3 py-1 text-rose-700 hover:bg-rose-50">Delete</button>
+            </td>
+        </tr>`).join("");
+    } catch (error) {
+        console.error("Inventory purchase history error:", error);
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-rose-600">Could not load inventory purchases.</td></tr>';
+    }
+}
+
+async function refreshAccounting() {
+    await Promise.all([
+        loadMonthlyAnalytics(),
+        loadSalesHistory(),
+        loadExpenseHistory(),
+        loadInventoryPurchaseHistory()
+    ]);
+}
+
+function scrollToAccountingHistory(sectionId) {
+    switchTab("accounting");
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 async function loadOfflineSaleProducts() {
     const select = document.getElementById("offline-sale-product");
-
     try {
-        const response = await fetch("https://sihha-natural.onrender.com/api/products/");
-        if (!response.ok) throw new Error("Could not load products");
-
-        const products = await response.json();
+        const products = await accountingRequest("/products/");
         select.replaceChildren(new Option("Select a product", ""));
         products.forEach(product => {
             const option = new Option(product.name, product.id);
@@ -738,6 +871,21 @@ async function loadOfflineSaleProducts() {
     }
 }
 
+function updateOfflineSaleMode() {
+    const customMode = document.querySelector('input[name="offline-item-mode"]:checked')?.value === "custom";
+    document.getElementById("offline-existing-fields").classList.toggle("hidden", customMode);
+    document.getElementById("offline-custom-fields").classList.toggle("hidden", !customMode);
+    document.getElementById("offline-sale-product").required = !customMode;
+    document.getElementById("offline-sale-price").required = !customMode;
+    document.getElementById("offline-custom-name").required = customMode;
+    document.getElementById("offline-custom-selling-price").required = customMode;
+    document.getElementById("offline-custom-cost-price").required = customMode;
+}
+
+document.querySelectorAll('input[name="offline-item-mode"]').forEach(input => {
+    input.addEventListener("change", updateOfflineSaleMode);
+});
+
 document.getElementById("offline-sale-product").addEventListener("change", event => {
     const selected = event.target.selectedOptions[0];
     if (selected?.dataset.price) {
@@ -747,57 +895,82 @@ document.getElementById("offline-sale-product").addEventListener("change", event
 
 document.getElementById("expense-form").addEventListener("submit", async event => {
     event.preventDefault();
-
-    const dateValue = document.getElementById("expense-date").value;
-    const expense = {
-        title: document.getElementById("expense-title").value.trim(),
-        amount: Number(document.getElementById("expense-amount").value),
-        category: document.getElementById("expense-category").value.trim(),
-        date: `${dateValue}:00`
-    };
-
+    const form = event.currentTarget;
     try {
-        const response = await fetch("https://sihha-natural.onrender.com/api/expenses/", {
+        await accountingRequest("/expenses/", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(expense)
+            body: new FormData(form)
         });
-        if (!response.ok) throw new Error("Could not save expense");
-
-        event.target.reset();
+        form.reset();
+        await refreshAccounting();
         alert("Expense saved.");
-        await loadMonthlyAnalytics();
     } catch (error) {
         console.error("Expense submission error:", error);
-        alert("Could not save the expense.");
+        alert(`Could not save expense: ${error.message}`);
+    }
+});
+
+document.getElementById("inventory-purchase-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+        await accountingRequest("/inventory-purchases/", {
+            method: "POST",
+            body: new FormData(form)
+        });
+        form.reset();
+        await refreshAccounting();
+        alert("Inventory purchase saved.");
+    } catch (error) {
+        console.error("Inventory purchase submission error:", error);
+        alert(`Could not save purchase: ${error.message}`);
     }
 });
 
 document.getElementById("offline-sale-form").addEventListener("submit", async event => {
     event.preventDefault();
-
-    const select = document.getElementById("offline-sale-product");
-    const selected = select.selectedOptions[0];
-    const price = Number(document.getElementById("offline-sale-price").value);
+    const customMode = document.querySelector('input[name="offline-item-mode"]:checked')?.value === "custom";
     const quantity = Number(document.getElementById("offline-sale-quantity").value);
+    let item;
 
-    if (!selected?.value || !Number.isFinite(price) || price <= 0 || !Number.isInteger(quantity) || quantity < 1) {
-        alert("Select a product and enter a valid price and quantity.");
+    if (customMode) {
+        const customPrice = Number(document.getElementById("offline-custom-selling-price").value);
+        const customCost = Number(document.getElementById("offline-custom-cost-price").value);
+        const customName = document.getElementById("offline-custom-name").value.trim();
+        if (!customName || !Number.isFinite(customPrice) || customPrice <= 0 || !Number.isFinite(customCost) || customCost < 0) {
+            alert("Enter a custom product name and valid selling and cost prices.");
+            return;
+        }
+        item = {
+            custom_product_name: customName,
+            custom_selling_price: customPrice,
+            custom_cost_price: customCost,
+            quantity
+        };
+    } else {
+        const select = document.getElementById("offline-sale-product");
+        const selected = select.selectedOptions[0];
+        const price = Number(document.getElementById("offline-sale-price").value);
+        if (!selected?.value || !Number.isFinite(price) || price <= 0) {
+            alert("Select a product and enter a valid selling price.");
+            return;
+        }
+        item = { product_id: selected.value, name: selected.dataset.name, price, quantity };
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+        alert("Enter a valid quantity.");
         return;
     }
 
-    const subtotal = price * quantity;
-    const order = {
+    const unitPrice = customMode ? item.custom_selling_price : item.price;
+    const subtotal = unitPrice * quantity;
+    const sale = {
         customer_name: "Walk-in customer",
         customer_phone: "N/A",
         delivery_area: "Offline",
         address: "In-store sale",
-        items: [{
-            product_id: selected.value,
-            name: selected.dataset.name,
-            price,
-            quantity
-        }],
+        items: [item],
         subtotal,
         delivery_charge: 0,
         total: subtotal,
@@ -805,27 +978,202 @@ document.getElementById("offline-sale-form").addEventListener("submit", async ev
     };
 
     try {
-        const response = await fetch("https://sihha-natural.onrender.com/api/orders/", {
+        await accountingRequest("/orders/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(order)
+            body: JSON.stringify(sale)
         });
-        if (!response.ok) throw new Error("Could not save offline sale");
-
-        event.target.reset();
-        await loadOfflineSaleProducts();
+        event.currentTarget.reset();
+        updateOfflineSaleMode();
+        await Promise.all([refreshAccounting(), fetchOrders(), loadOfflineSaleProducts()]);
         alert("Offline sale saved.");
-        await loadMonthlyAnalytics();
     } catch (error) {
         console.error("Offline sale submission error:", error);
-        alert("Could not save the offline sale.");
+        alert(`Could not save offline sale: ${error.message}`);
     }
 });
 
+async function deleteSale(orderId) {
+    if (!confirm("Delete this sale? Its profit and revenue will be removed from analytics.")) return;
+    try {
+        await accountingRequest(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+        await Promise.all([refreshAccounting(), fetchOrders()]);
+    } catch (error) {
+        alert(`Could not delete sale: ${error.message}`);
+    }
+}
+
+function openSaleEdit(order) {
+    document.getElementById("edit-sale-id").value = order.id;
+    document.getElementById("edit-sale-customer").value = order.customer_name || "";
+    document.getElementById("edit-sale-phone").value = order.customer_phone || "";
+    document.getElementById("edit-sale-area").value = order.delivery_area || "";
+    document.getElementById("edit-sale-address").value = order.address || "";
+    document.getElementById("edit-sale-type").value = order.order_type || "online";
+    document.getElementById("edit-sale-subtotal").value = order.subtotal ?? 0;
+    document.getElementById("edit-sale-delivery").value = order.delivery_charge ?? 0;
+    document.getElementById("edit-sale-total").value = order.total ?? 0;
+    document.getElementById("edit-sale-items").value = JSON.stringify(order.items || [], null, 2);
+    const modal = document.getElementById("edit-sale-modal");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+}
+
+function editSale(orderId) {
+    const order = accountingOrders.find(item => item.id === orderId);
+    if (order) openSaleEdit(order);
+}
+
+function closeSaleEdit() {
+    const modal = document.getElementById("edit-sale-modal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+}
+
+document.getElementById("edit-sale-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const orderId = document.getElementById("edit-sale-id").value;
+    let items;
+    try {
+        items = JSON.parse(document.getElementById("edit-sale-items").value);
+        if (!Array.isArray(items) || items.length === 0) throw new Error("Items must be a non-empty JSON array");
+    } catch (error) {
+        alert(`Invalid items JSON: ${error.message}`);
+        return;
+    }
+
+    const order = {
+        customer_name: document.getElementById("edit-sale-customer").value.trim(),
+        customer_phone: document.getElementById("edit-sale-phone").value.trim(),
+        delivery_area: document.getElementById("edit-sale-area").value.trim(),
+        address: document.getElementById("edit-sale-address").value.trim(),
+        order_type: document.getElementById("edit-sale-type").value,
+        items,
+        subtotal: Number(document.getElementById("edit-sale-subtotal").value),
+        delivery_charge: Number(document.getElementById("edit-sale-delivery").value),
+        total: Number(document.getElementById("edit-sale-total").value)
+    };
+
+    try {
+        await accountingRequest(`/orders/${encodeURIComponent(orderId)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(order)
+        });
+        closeSaleEdit();
+        await Promise.all([refreshAccounting(), fetchOrders()]);
+    } catch (error) {
+        alert(`Could not update sale: ${error.message}`);
+    }
+});
+
+function toDateTimeLocal(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = part => String(part).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function openLedgerEdit(kind, record) {
+    const isExpense = kind === "expense";
+    const fields = isExpense
+        ? [
+            ["title", "Title", "text", record.title, true],
+            ["amount", "Amount (৳)", "number", record.amount, true],
+            ["category", "Category", "text", record.category, true],
+            ["shop_name", "Shop name (optional)", "text", record.shop_name || "", false],
+            ["date", "Date and time", "datetime-local", toDateTimeLocal(record.date), true]
+        ]
+        : [
+            ["item_name", "Item name", "text", record.item_name, true],
+            ["amount", "Amount (৳)", "number", record.amount, true],
+            ["supplier_name", "Supplier (optional)", "text", record.supplier_name || "", false],
+            ["date", "Date and time", "datetime-local", toDateTimeLocal(record.date), true]
+        ];
+
+    document.getElementById("ledger-edit-id").value = record.id;
+    document.getElementById("ledger-edit-type").value = kind;
+    document.getElementById("ledger-edit-heading").textContent = isExpense ? "Edit Expense" : "Edit Inventory Purchase";
+    document.getElementById("ledger-edit-fields").innerHTML = fields.map(([name, label, type, value, required]) => `
+        <div>
+            <label for="ledger-field-${name}" class="mb-1 block text-sm font-semibold text-gray-700">${label}</label>
+            <input id="ledger-field-${name}" name="${name}" type="${type}" value="${escapeAccountingHtml(value)}" ${type === "number" ? 'min="0" step="0.01"' : ""} ${required ? "required" : ""} class="w-full rounded border p-2">
+        </div>
+    `).join("");
+    document.getElementById("ledger-edit-bill").value = "";
+    const modal = document.getElementById("ledger-edit-modal");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+}
+
+function closeLedgerEdit() {
+    const modal = document.getElementById("ledger-edit-modal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+}
+
+document.getElementById("ledger-edit-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const kind = document.getElementById("ledger-edit-type").value;
+    const recordId = document.getElementById("ledger-edit-id").value;
+    const endpoint = kind === "expense" ? "expenses" : "inventory-purchases";
+
+    try {
+        await accountingRequest(`/${endpoint}/${encodeURIComponent(recordId)}`, {
+            method: "PUT",
+            body: new FormData(form)
+        });
+        closeLedgerEdit();
+        await refreshAccounting();
+    } catch (error) {
+        alert(`Could not update record: ${error.message}`);
+    }
+});
+
+async function editExpense(expenseId) {
+    try {
+        const expense = await accountingRequest(`/expenses/${encodeURIComponent(expenseId)}`);
+        openLedgerEdit("expense", expense);
+    } catch (error) {
+        alert(`Could not load expense: ${error.message}`);
+    }
+}
+
+async function deleteExpense(expenseId) {
+    if (!confirm("Delete this expense?")) return;
+    try {
+        await accountingRequest(`/expenses/${encodeURIComponent(expenseId)}`, { method: "DELETE" });
+        await refreshAccounting();
+    } catch (error) {
+        alert(`Could not delete expense: ${error.message}`);
+    }
+}
+
+async function editInventoryPurchase(purchaseId) {
+    try {
+        const purchase = await accountingRequest(`/inventory-purchases/${encodeURIComponent(purchaseId)}`);
+        openLedgerEdit("inventory", purchase);
+    } catch (error) {
+        alert(`Could not load purchase: ${error.message}`);
+    }
+}
+
+async function deleteInventoryPurchase(purchaseId) {
+    if (!confirm("Delete this inventory purchase? This changes stock valuation.")) return;
+    try {
+        await accountingRequest(`/inventory-purchases/${encodeURIComponent(purchaseId)}`, { method: "DELETE" });
+        await refreshAccounting();
+    } catch (error) {
+        alert(`Could not delete purchase: ${error.message}`);
+    }
+}
+
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
-    loadMonthlyAnalytics();
+    refreshAccounting();
     loadOfflineSaleProducts();
+    updateOfflineSaleMode();
     loadCategories();
     loadBanners();
     loadAdminProducts();

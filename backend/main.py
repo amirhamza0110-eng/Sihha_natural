@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # <-- ETA NOTUN ADD KORA HOYECHE
 from app.database import db
-from app.routes import products, categories, banners, orders, videos, expenses, analytics
+from app.routes import products, categories, banners, orders, videos, expenses, analytics, inventory_purchases
 from app.routes import offers  
 
 app = FastAPI(title="Sihha Naturals API")
@@ -44,3 +44,4 @@ app.include_router(videos.router, prefix="/api/videos", tags=["Videos"])
 app.include_router(offers.router, prefix="/api/offers", tags=["Offers"])
 app.include_router(expenses.router, prefix="/api/expenses", tags=["Expenses"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(inventory_purchases.router, prefix="/api/inventory-purchases", tags=["Inventory Purchases"])
