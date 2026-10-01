@@ -1,8 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 from app.database import db
+from app.admin_auth import verify_admin_token
 from app.cloudinary_utils import upload_product_image
 from app.schemas import ProductResponse
 from bson import ObjectId
@@ -17,6 +19,7 @@ def product_helper(product) -> dict:
         "category": product["category"],
         "description": product["description"],
         "price": product["price"],
+        "weight": product.get("weight"),
         "stock": product["stock"],
         "image_url": product["image_url"],
         "is_active": product.get("is_active", True)
@@ -29,13 +32,15 @@ async def create_product(
     description: str = Form(...),
     price: float = Form(...),
     cost_price: float = Form(0),
+    weight: Optional[str] = Form(None),
     stock: int = Form(...),
-    image: UploadFile = File(...)
+    image: UploadFile = File(...),
+    _admin: None = Depends(verify_admin_token),
 ):
     try:
         # ১. ছবি রিড করা এবং Cloudinary-তে আপলোড করা
         file_bytes = await image.read()
-        upload_result = upload_product_image(file_bytes, image.filename)
+        upload_result = upload_product_image(file_bytes, image.filename or "product-image")
         
         # ২. ডাটাবেসের জন্য প্রোডাক্টের তথ্য সাজানো
         product_data = {
@@ -44,6 +49,7 @@ async def create_product(
             "description": description,
             "price": price,
             "cost_price": cost_price,
+            "weight": weight.strip() if weight and weight.strip() else None,
             "stock": stock,
             "image_url": upload_result["url"],
             "cloudinary_public_id": upload_result["public_id"],
@@ -70,7 +76,7 @@ from bson.errors import InvalidId
 from app.cloudinary_utils import delete_product_image # একদম উপরে ইম্পোর্ট সেকশনে এটা অ্যাড করবেন যদি না থাকে
 
 @router.delete("/{product_id}")
-def delete_product(product_id: str):
+def delete_product(product_id: str, _admin: None = Depends(verify_admin_token)):
     """প্রোডাক্ট এবং Cloudinary থেকে ছবি মুছে ফেলার API"""
     try:
         # ১. ডাটাবেস থেকে প্রোডাক্টটি খোঁজা
@@ -104,6 +110,7 @@ def get_product(product_id: str):
             "name": product["name"],
             "category": product["category"],
             "price": product["price"],
+            "weight": product.get("weight"),
             "stock": product["stock"],
             "description": product.get("description", "No description available."),
             "image_url": product["image_url"]
@@ -113,21 +120,38 @@ def get_product(product_id: str):
 
 
 class ProductUpdate(BaseModel):
-    name: str
-    price: float
-    cost_price: float = 0
-    stock: int
-    description: str
+    name: Optional[str] = None
+    price: Optional[float] = None
+    cost_price: Optional[float] = None
+    weight: Optional[str] = None
+    stock: Optional[int] = None
+    description: Optional[str] = None
 
 @router.put("/{product_id}")
-def update_product(product_id: str, product: ProductUpdate):
+def update_product(
+    product_id: str,
+    product: ProductUpdate,
+    _admin: None = Depends(verify_admin_token),
+):
     try:
+        if not ObjectId.is_valid(product_id):
+            raise HTTPException(status_code=400, detail="Invalid Product ID")
+
+        updates = product.dict(exclude_unset=True)
+        if "weight" in updates:
+            weight = updates["weight"]
+            updates["weight"] = weight.strip() or None if weight else None
+        if not updates:
+            raise HTTPException(status_code=400, detail="No product fields provided")
+
         result = db.products.update_one(
             {"_id": ObjectId(product_id)},
-            {"$set": product.dict(exclude_unset=True)}
+            {"$set": updates}
         )
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Product not found")
         return {"message": "Product updated successfully"}
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid Product ID")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

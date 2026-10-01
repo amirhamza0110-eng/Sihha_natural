@@ -1,35 +1,61 @@
 // ================= ADMIN PASSCODE LOGIC =================
-const MASTER_PASSCODE = "hamza1711"; 
+const ADMIN_PRODUCTS_API = "https://sihha-natural.onrender.com/api/admin/products/";
+let adminApiToken = sessionStorage.getItem("sihha_admin_api_token") || "";
 
-function checkAdminStatus() {
+function adminAuthHeaders(headers = {}) {
+    return {
+        ...headers,
+        ...(adminApiToken ? { "X-Admin-Token": adminApiToken } : {})
+    };
+}
+
+async function checkAdminStatus() {
     const loginScreen = document.getElementById('admin-login-screen');
     if (!loginScreen) return;
-    
-    // localStorage er bodole sessionStorage deya holo
-    const isUnlocked = sessionStorage.getItem('sihha_admin_unlocked');
-    if (isUnlocked === 'true') {
+
+    if (!adminApiToken) {
+        loginScreen.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const response = await fetch(ADMIN_PRODUCTS_API, {
+            headers: { "X-Admin-Token": adminApiToken }
+        });
+        if (!response.ok) throw new Error("Admin token is no longer valid");
         loginScreen.classList.add('hidden');
-    } else {
+    } catch (error) {
+        adminApiToken = "";
+        sessionStorage.removeItem("sihha_admin_api_token");
         loginScreen.classList.remove('hidden');
     }
 }
 
-function checkAdminPasscode() {
-    const input = document.getElementById('admin-passcode').value;
+async function checkAdminPasscode() {
+    const tokenInput = document.getElementById('admin-passcode');
+    const token = tokenInput.value.trim();
     const errorMsg = document.getElementById('login-error');
 
-    if (input === MASTER_PASSCODE) {
-        sessionStorage.setItem('sihha_admin_unlocked', 'true');
+    try {
+        const response = await fetch(ADMIN_PRODUCTS_API, {
+            headers: { "X-Admin-Token": token }
+        });
+        if (!response.ok) throw new Error("Token verification failed");
+
+        adminApiToken = token;
+        sessionStorage.setItem("sihha_admin_api_token", token);
         document.getElementById('admin-login-screen').classList.add('hidden');
-        if(errorMsg) errorMsg.classList.add('hidden');
-    } else {
-        if(errorMsg) errorMsg.classList.remove('hidden');
-        document.getElementById('admin-passcode').value = '';
+        if (errorMsg) errorMsg.classList.add('hidden');
+        await loadAdminProducts();
+    } catch (error) {
+        if (errorMsg) errorMsg.classList.remove('hidden');
+        tokenInput.value = '';
     }
 }
 
 function adminLogout() {
-    sessionStorage.removeItem('sihha_admin_unlocked');
+    adminApiToken = "";
+    sessionStorage.removeItem("sihha_admin_api_token");
     const loginScreen = document.getElementById('admin-login-screen');
     if(loginScreen) loginScreen.classList.remove('hidden');
 }
@@ -235,7 +261,10 @@ let allProductsData = [];
 async function loadAdminProducts() {
     const tableBody = document.getElementById('admin-product-list');
     try {
-        const response = await fetch("https://sihha-natural.onrender.com/api/products/");
+        const response = await fetch(ADMIN_PRODUCTS_API, {
+            headers: adminAuthHeaders()
+        });
+        if (!response.ok) throw new Error("Could not load admin products");
         const products = await response.json();
         
         allProductsData = products; 
@@ -250,8 +279,8 @@ async function loadAdminProducts() {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-gray-50 transition border-b";
             tr.innerHTML = `
-                <td class="p-3"><img src="${product.image_url}" class="w-12 h-12 object-cover rounded shadow-sm"></td>
-                <td class="p-3 font-semibold text-gray-800">${product.name} <br><span class="text-xs text-green-600">${product.category}</span></td>
+                <td class="p-3"><img src="${escapeAccountingHtml(product.image_url)}" alt="" class="w-12 h-12 object-cover rounded shadow-sm"></td>
+                <td class="p-3 font-semibold text-gray-800">${escapeAccountingHtml(product.name)}${product.weight ? `<br><span class="text-xs font-medium text-gray-500">${escapeAccountingHtml(product.weight)}</span>` : ""}<br><span class="text-xs text-green-600">${escapeAccountingHtml(product.category)}</span></td>
                 <td class="p-3 font-bold text-gray-700">৳${product.price}</td>
                 <td class="p-3 text-right">
                     <button onclick="openEditProductModal('${product.id}')" class="bg-blue-100 text-blue-600 px-3 py-1 rounded hover:bg-blue-500 hover:text-white transition mr-2">
@@ -277,7 +306,8 @@ function openEditProductModal(productId) {
     document.getElementById('edit-product-id').value = product.id;
     document.getElementById('edit-product-name').value = product.name;
     document.getElementById('edit-product-price').value = product.price;
-    document.getElementById('edit-product-cost-price').value = '';
+    document.getElementById('edit-product-cost-price').value = product.cost_price ?? 0;
+    document.getElementById('edit-product-weight').value = product.weight || '';
     document.getElementById('edit-product-stock').value = product.stock;
     document.getElementById('edit-product-description').value = product.description;
 
@@ -295,11 +325,11 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
     const updatedData = {
         name: document.getElementById('edit-product-name').value,
         price: parseFloat(document.getElementById('edit-product-price').value),
+        cost_price: parseFloat(document.getElementById('edit-product-cost-price').value),
+        weight: document.getElementById('edit-product-weight').value.trim(),
         stock: parseInt(document.getElementById('edit-product-stock').value),
         description: document.getElementById('edit-product-description').value
     };
-    const costPrice = document.getElementById('edit-product-cost-price').value;
-    if (costPrice !== '') updatedData.cost_price = parseFloat(costPrice);
 
     const submitBtn = this.querySelector('button[type="submit"]');
     submitBtn.innerText = "Saving...";
@@ -307,15 +337,16 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
     try {
         const response = await fetch(`https://sihha-natural.onrender.com/api/products/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(updatedData)
         });
 
         if(response.ok) {
             closeEditProductModal();
-            loadAdminProducts();
+            await loadAdminProducts();
         } else {
-            alert("Failed to update product");
+            const result = await response.json().catch(() => ({}));
+            alert(result.detail || "Failed to update product");
         }
     } catch(e) {
         alert("Server error connecting to backend.");
@@ -327,9 +358,12 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
 async function deleteProduct(productId) {
     if(!confirm("Are you sure you want to delete this product?")) return;
     try {
-        const response = await fetch(`https://sihha-natural.onrender.com/api/products/${productId}`, { method: 'DELETE' });
+        const response = await fetch(`https://sihha-natural.onrender.com/api/products/${productId}`, {
+            method: 'DELETE',
+            headers: adminAuthHeaders()
+        });
         if(response.ok) {
-            loadAdminProducts(); 
+            await loadAdminProducts();
         } else {
             alert("Failed to delete product.");
         }
@@ -353,6 +387,7 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
     formData.append("category", document.getElementById('category').value);
     formData.append("price", document.getElementById('price').value);
     formData.append("cost_price", document.getElementById('cost_price').value);
+    formData.append("weight", document.getElementById('weight').value.trim());
     formData.append("stock", document.getElementById('stock').value);
     formData.append("description", document.getElementById('description').value);
     formData.append("image", document.getElementById('image').files[0]);
@@ -360,14 +395,15 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
     try {
         const response = await fetch("https://sihha-natural.onrender.com/api/products/", {
             method: "POST",
+            headers: adminAuthHeaders(),
             body: formData
         });
 
         if (response.ok) {
             statusMsg.innerText = "✅ Product Added Successfully!";
             statusMsg.className = "text-center font-semibold mt-4 text-green-600 block";
-            this.reset(); 
-            loadAdminProducts(); 
+            this.reset();
+            await loadAdminProducts();
         } else {
             statusMsg.innerText = "❌ Failed to add product.";
             statusMsg.className = "text-center font-semibold mt-4 text-red-600 block";

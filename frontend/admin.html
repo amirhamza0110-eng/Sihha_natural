@@ -126,6 +126,10 @@
                             <input type="number" id="cost_price" min="0" step="0.01" required class="w-full border p-2 rounded outline-none">
                         </div>
                         <div>
+                            <label class="block text-sm font-semibold text-gray-700">Weight / Quantity (e.g., 500 gm)</label>
+                            <input type="text" id="weight" placeholder="500 gm" class="w-full border p-2 rounded outline-none">
+                        </div>
+                        <div>
                             <label class="block text-sm font-semibold text-gray-700">Stock</label>
                             <input type="number" id="stock" required class="w-full border p-2 rounded outline-none">
                         </div>
@@ -516,6 +520,14 @@
                             <input type="number" id="edit-product-price" required class="w-full border p-2 rounded outline-none">
                         </div>
                         <div>
+                            <label class="block text-sm font-semibold text-gray-700">Cost Price (৳)</label>
+                            <input type="number" id="edit-product-cost-price" min="0" step="0.01" required class="w-full border p-2 rounded outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Weight / Quantity (e.g., 500 gm)</label>
+                            <input type="text" id="edit-product-weight" placeholder="500 gm" class="w-full border p-2 rounded outline-none">
+                        </div>
+                        <div>
                             <label class="block text-sm font-semibold text-gray-700">Stock</label>
                             <input type="number" id="edit-product-stock" required class="w-full border p-2 rounded outline-none">
                         </div>
@@ -554,14 +566,14 @@
     <div id="admin-login-screen" class="fixed inset-0 bg-gray-900 z-[999] flex flex-col justify-center items-center">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm text-center">
             <h1 class="text-3xl font-bold text-natureGreen mb-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</h1>
-            <p class="text-gray-500 mb-6 text-sm">Please enter the master passcode.</p>
+            <p class="text-gray-500 mb-6 text-sm">Enter the admin API token configured on the server.</p>
             
-            <input type="password" id="admin-passcode" placeholder="Enter Passcode..." class="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-natureGreen focus:ring-0 outline-none text-center text-xl tracking-widest mb-4">
+            <input type="password" id="admin-passcode" placeholder="Admin API token" autocomplete="current-password" class="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-natureGreen focus:ring-0 outline-none text-center text-xl tracking-widest mb-4">
             
             <button onclick="checkAdminPasscode()" class="w-full bg-natureGreen text-white font-bold py-3 rounded-lg hover:bg-green-800 transition shadow-md">
                 Unlock <i class="fa-solid fa-lock-open ml-1"></i>
             </button>
-            <p id="login-error" class="text-red-500 text-sm mt-3 hidden font-semibold">Incorrect Passcode!</p>
+            <p id="login-error" class="text-red-500 text-sm mt-3 hidden font-semibold">Token verification failed.</p>
         </div>
     </div>
 

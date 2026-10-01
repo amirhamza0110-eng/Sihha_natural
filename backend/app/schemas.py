@@ -8,6 +8,7 @@ class ProductBase(BaseModel):
     description: str
     price: float
     cost_price: float = 0
+    weight: Optional[str] = None
     stock: int
 
 class ProductResponse(BaseModel):
@@ -16,6 +17,7 @@ class ProductResponse(BaseModel):
     category: str
     description: str
     price: float
+    weight: Optional[str] = None
     stock: int
     image_url: str
     is_active: bool
