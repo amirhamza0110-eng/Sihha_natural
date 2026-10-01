@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.database import db
 from bson import ObjectId
-from typing import List
+from typing import List, Literal, Optional
 from datetime import datetime
 
 router = APIRouter()
@@ -12,6 +12,7 @@ class OrderItem(BaseModel):
     name: str
     price: float
     quantity: int
+    product_id: Optional[str] = None
 
 class OrderCreate(BaseModel):
     customer_name: str
@@ -22,11 +23,32 @@ class OrderCreate(BaseModel):
     subtotal: float
     delivery_charge: float
     total: float
+    order_type: Literal["online", "offline"] = "online"
 
 # ১. নতুন অর্ডার তৈরি করার API
 @router.post("/")
 def create_order(order: OrderCreate):
     order_dict = order.dict()
+    total_profit = 0.0
+    for item in order.items:
+        if item.product_id and not ObjectId.is_valid(item.product_id):
+            raise HTTPException(status_code=400, detail="Invalid product ID")
+
+        product_query = (
+            {"_id": ObjectId(item.product_id)}
+            if item.product_id
+            else {"name": item.name}
+        )
+        product = db.products.find_one(product_query)
+        if not product:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Product cost could not be found for '{item.name}'",
+            )
+
+        total_profit += (item.price - product.get("cost_price", 0)) * item.quantity
+
+    order_dict["total_profit"] = total_profit
     order_dict["status"] = "Pending"  # শুরুতে অর্ডারের স্ট্যাটাস Pending থাকবে
     order_dict["created_at"] = datetime.now()
     

@@ -28,6 +28,7 @@ async def create_product(
     category: str = Form(...),
     description: str = Form(...),
     price: float = Form(...),
+    cost_price: float = Form(0),
     stock: int = Form(...),
     image: UploadFile = File(...)
 ):
@@ -42,6 +43,7 @@ async def create_product(
             "category": category,
             "description": description,
             "price": price,
+            "cost_price": cost_price,
             "stock": stock,
             "image_url": upload_result["url"],
             "cloudinary_public_id": upload_result["public_id"],
@@ -113,6 +115,7 @@ def get_product(product_id: str):
 class ProductUpdate(BaseModel):
     name: str
     price: float
+    cost_price: float = 0
     stock: int
     description: str
 
@@ -121,7 +124,7 @@ def update_product(product_id: str, product: ProductUpdate):
     try:
         result = db.products.update_one(
             {"_id": ObjectId(product_id)},
-            {"$set": product.dict()}
+            {"$set": product.dict(exclude_unset=True)}
         )
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Product not found")

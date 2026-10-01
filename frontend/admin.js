@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", checkAdminStatus);
 
 // ================= TAB SWITCHING LOGIC (UPDATED WITH VIDEOS) =================
 function switchTab(tabName) {
-    const tabs = ['products', 'categories', 'banners', 'orders', 'videos', 'offers']; // videos & offers যোগ করা হয়েছে
+    const tabs = ['products', 'categories', 'banners', 'orders', 'videos', 'offers', 'accounting']; // videos & offers যোগ করা হয়েছে
 
     tabs.forEach(t => {
         // সব সেকশন হাইড করা
@@ -277,6 +277,7 @@ function openEditProductModal(productId) {
     document.getElementById('edit-product-id').value = product.id;
     document.getElementById('edit-product-name').value = product.name;
     document.getElementById('edit-product-price').value = product.price;
+    document.getElementById('edit-product-cost-price').value = '';
     document.getElementById('edit-product-stock').value = product.stock;
     document.getElementById('edit-product-description').value = product.description;
 
@@ -297,6 +298,8 @@ document.getElementById('edit-product-form').addEventListener('submit', async fu
         stock: parseInt(document.getElementById('edit-product-stock').value),
         description: document.getElementById('edit-product-description').value
     };
+    const costPrice = document.getElementById('edit-product-cost-price').value;
+    if (costPrice !== '') updatedData.cost_price = parseFloat(costPrice);
 
     const submitBtn = this.querySelector('button[type="submit"]');
     submitBtn.innerText = "Saving...";
@@ -349,6 +352,7 @@ document.getElementById('add-product-form').addEventListener('submit', async fun
     formData.append("name", document.getElementById('name').value);
     formData.append("category", document.getElementById('category').value);
     formData.append("price", document.getElementById('price').value);
+    formData.append("cost_price", document.getElementById('cost_price').value);
     formData.append("stock", document.getElementById('stock').value);
     formData.append("description", document.getElementById('description').value);
     formData.append("image", document.getElementById('image').files[0]);
@@ -687,8 +691,141 @@ async function deleteOffer(id) {
     }
 }
 
+async function loadMonthlyAnalytics() {
+    const formatMoney = value => new Intl.NumberFormat("en-BD", {
+        style: "currency",
+        currency: "BDT",
+        maximumFractionDigits: 2
+    }).format(Number(value) || 0);
+
+    try {
+        const response = await fetch("https://sihha-natural.onrender.com/api/analytics/monthly");
+        if (!response.ok) throw new Error("Could not load monthly analytics");
+
+        const data = await response.json();
+        const online = Number(data.total_orders_count?.online) || 0;
+        const offline = Number(data.total_orders_count?.offline) || 0;
+
+        document.getElementById("analytics-total-orders").textContent = online + offline;
+        document.getElementById("analytics-online-orders").textContent = online;
+        document.getElementById("analytics-offline-orders").textContent = offline;
+        document.getElementById("analytics-revenue").textContent = formatMoney(data.total_revenue);
+        document.getElementById("analytics-expenses").textContent = formatMoney(data.total_expenses);
+        document.getElementById("analytics-net-profit").textContent = formatMoney(data.net_profit);
+    } catch (error) {
+        console.error("Monthly analytics error:", error);
+    }
+}
+
+async function loadOfflineSaleProducts() {
+    const select = document.getElementById("offline-sale-product");
+
+    try {
+        const response = await fetch("https://sihha-natural.onrender.com/api/products/");
+        if (!response.ok) throw new Error("Could not load products");
+
+        const products = await response.json();
+        select.replaceChildren(new Option("Select a product", ""));
+        products.forEach(product => {
+            const option = new Option(product.name, product.id);
+            option.dataset.name = product.name;
+            option.dataset.price = product.price;
+            select.add(option);
+        });
+    } catch (error) {
+        console.error("Could not load products for offline sale:", error);
+        select.replaceChildren(new Option("Products unavailable", ""));
+    }
+}
+
+document.getElementById("offline-sale-product").addEventListener("change", event => {
+    const selected = event.target.selectedOptions[0];
+    if (selected?.dataset.price) {
+        document.getElementById("offline-sale-price").value = selected.dataset.price;
+    }
+});
+
+document.getElementById("expense-form").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const dateValue = document.getElementById("expense-date").value;
+    const expense = {
+        title: document.getElementById("expense-title").value.trim(),
+        amount: Number(document.getElementById("expense-amount").value),
+        category: document.getElementById("expense-category").value.trim(),
+        date: `${dateValue}:00`
+    };
+
+    try {
+        const response = await fetch("https://sihha-natural.onrender.com/api/expenses/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(expense)
+        });
+        if (!response.ok) throw new Error("Could not save expense");
+
+        event.target.reset();
+        alert("Expense saved.");
+        await loadMonthlyAnalytics();
+    } catch (error) {
+        console.error("Expense submission error:", error);
+        alert("Could not save the expense.");
+    }
+});
+
+document.getElementById("offline-sale-form").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const select = document.getElementById("offline-sale-product");
+    const selected = select.selectedOptions[0];
+    const price = Number(document.getElementById("offline-sale-price").value);
+    const quantity = Number(document.getElementById("offline-sale-quantity").value);
+
+    if (!selected?.value || !Number.isFinite(price) || price <= 0 || !Number.isInteger(quantity) || quantity < 1) {
+        alert("Select a product and enter a valid price and quantity.");
+        return;
+    }
+
+    const subtotal = price * quantity;
+    const order = {
+        customer_name: "Walk-in customer",
+        customer_phone: "N/A",
+        delivery_area: "Offline",
+        address: "In-store sale",
+        items: [{
+            product_id: selected.value,
+            name: selected.dataset.name,
+            price,
+            quantity
+        }],
+        subtotal,
+        delivery_charge: 0,
+        total: subtotal,
+        order_type: "offline"
+    };
+
+    try {
+        const response = await fetch("https://sihha-natural.onrender.com/api/orders/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(order)
+        });
+        if (!response.ok) throw new Error("Could not save offline sale");
+
+        event.target.reset();
+        await loadOfflineSaleProducts();
+        alert("Offline sale saved.");
+        await loadMonthlyAnalytics();
+    } catch (error) {
+        console.error("Offline sale submission error:", error);
+        alert("Could not save the offline sale.");
+    }
+});
+
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", () => {
+    loadMonthlyAnalytics();
+    loadOfflineSaleProducts();
     loadCategories();
     loadBanners();
     loadAdminProducts();
